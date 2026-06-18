@@ -415,6 +415,7 @@ function LoginPage({ onLogin, users, siswa, pelanggaran, apresiasi, hafalan }) {
   const [savedCreds, setSavedCreds] = useState(null);
 
   useEffect(() => {
+    alert("URL yang dibaca Vercel: " + import.meta.env.VITE_SUPABASE_URL);
     try {
       const s = localStorage.getItem("sms_saved_login");
       if (s) { const c = JSON.parse(s); setSavedCreds(c); setUsername(c.username); setPassword(c.password); }
