@@ -1,5 +1,6 @@
-
+import { supabase } from './lib/supabaseClient'
 import { useState, useEffect, useRef } from "react";
+import logoAlirsyad from "./assets/logo-alirsyad.png";
 
 // ===================== MOCK DATA =====================
 const INITIAL_USERS = [
@@ -28,19 +29,150 @@ const INITIAL_SISWA = [
 ];
 
 const JENIS_PELANGGARAN = [
-  { id:1, nama:"Terlambat masuk sekolah", kategori:"Ringan", poin:10 },
-  { id:2, nama:"Tidak menggunakan seragam lengkap", kategori:"Ringan", poin:10 },
-  { id:3, nama:"Membuang sampah sembarangan", kategori:"Ringan", poin:10 },
-  { id:4, nama:"Berbicara tidak sopan", kategori:"Sedang", poin:25 },
-  { id:5, nama:"Membolos pelajaran", kategori:"Sedang", poin:25 },
-  { id:6, nama:"Membawa HP tanpa izin", kategori:"Sedang", poin:25 },
-  { id:7, nama:"Berkelahi", kategori:"Berat", poin:100 },
-  { id:8, nama:"Bullying", kategori:"Berat", poin:100 },
-  { id:9, nama:"Pencurian", kategori:"Sangat Berat", poin:100 },
-  { id:10, nama:"Merusak fasilitas sekolah", kategori:"Berat", poin:100 },
+  // =========================================================================
+  // A. PELANGGARAN RINGAN (10 POIN) - Sesuai Handbook Halaman 29
+  // =========================================================================
+  { nama: "1. Bercanda/bersenda gurau ketika salat, berdzikir, dan berdoa", kategori: "Ringan", poin: 10 },
+  { nama: "2. Tidak tertib belajar pada saat pembelajaran di kelas", kategori: "Ringan", poin: 10 },
+  { nama: "3. Keluar lingkungan sekolah tanpa izin", kategori: "Ringan", poin: 10 },
+  { nama: "4. Melompat pagar atau bangunan pembatas lain di sekolah", kategori: "Ringan", poin: 10 },
+  { nama: "5. Makan dan minum tidak sesuai dengan adab-adab Islami (berjalan, bersenda gurau, dll.)", kategori: "Ringan", poin: 10 },
+  { nama: "6. Berpenampilan tidak rapi (kuku dan pakaian) dan tidak mengenakan atribut yang telah ditentukan oleh sekolah", kategori: "Ringan", poin: 10 },
+  { nama: "7. Berambut panjang atau menata rambut tidak Islami (khusus putra)", kategori: "Ringan", poin: 10 },
+  { nama: "8. Celana, rok, baju, kerudung, sepatu, kaus kaki yang tidak sesuai dengan ketentuan sekolah", kategori: "Ringan", poin: 10 },
+  { nama: "9. Menggunakan seragam yang tidak sesuai dengan ketentuan sekolah", kategori: "Ringan", poin: 10 },
+  { nama: "10. Kerudung sengaja dipendekkan", kategori: "Ringan", poin: 10 },
+  { nama: "11. Membawa barang-barang yang tidak dibutuhkan ketika sekolah", kategori: "Ringan", poin: 10 },
+  { nama: "12. Mencorat-coret barang milik pribadi", kategori: "Ringan", poin: 10 },
+  { nama: "13. Menggambar kulit (tato tidak permanen/henna)", kategori: "Ringan", poin: 10 },
+  { nama: "14. Memakai perhiasan/aksesori kecuali jam tangan", kategori: "Ringan", poin: 10 },
+  { nama: "15. Tidak menggunakan kaus kaki ketika di kelas", kategori: "Ringan", poin: 10 },
+  { nama: "16. Tidak menggunakan sepatu saat kegiatan sekolah", kategori: "Ringan", poin: 10 },
+  { nama: "17. Menggunakan sandal tidak pada waktunya", kategori: "Ringan", poin: 10 },
+  { nama: "18. Kuku panjang", kategori: "Ringan", poin: 10 },
+  { nama: "19. Berolahraga tanpa menggunakan sepatu", kategori: "Ringan", poin: 10 },
+  { nama: "20. Melakukan aktivitas olahraga di tempat yang tidak diperkenankan", kategori: "Ringan", poin: 10 },
+  { nama: "21. Tidak tertib dalam mengikuti kegiatan ekstrakurikuler", kategori: "Ringan", poin: 10 },
+  { nama: "22. Berbicara tidak Islami seperti bicara kotor atau kasar", kategori: "Ringan", poin: 10 },
+  { nama: "23. Tidak membawa peralatan ekstrakurikuler", kategori: "Ringan", poin: 10 },
+  { nama: "24. Tidak mengikuti kegiatan ekstrakurikuler", kategori: "Ringan", poin: 10 },
+  { nama: "25. Bermain permainan yang tidak Islami (permainan kartu dan catur)", kategori: "Ringan", poin: 10 },
+  { nama: "26. Masbuk dalam salat berjamaah", kategori: "Ringan", poin: 10 },
+  { nama: "27. Tidak melaksanakan salat sunah rawatib dengan sengaja", kategori: "Ringan", poin: 10 },
+  { nama: "28. Tidak mengikuti salat berjamaah tanpa keterangan", kategori: "Ringan", poin: 10 },
+  { nama: "29. Tidak mengikuti kegiatan resmi sekolah", kategori: "Ringan", poin: 10 },
+  { nama: "30. Terlambat datang ke kelas pada jam pelajaran sekolah", kategori: "Ringan", poin: 10 },
+  { nama: "31. Tidak masuk kelas tanpa keterangan/izin selama satu kali", kategori: "Ringan", poin: 10 },
+  { nama: "32. Terlambat hadir dalam melaksanakan kegiatan sekolah", kategori: "Ringan", poin: 10 },
+  { nama: "33. Tidak melaksanakan tugas/piket kelas", kategori: "Ringan", poin: 10 },
+  { nama: "34. Tidak mengerjakan tugas dari ustaz/ustazah", kategori: "Ringan", poin: 10 },
+  { nama: "35. Tidak membawa peralatan sekolah yang dibutuhkan", kategori: "Ringan", poin: 10 },
+  { nama: "36. Meletakkan barang atau peralatan milik pribadi tidak pada tempatnya", kategori: "Ringan", poin: 10 },
+  { nama: "37. Membuang sampah tidak pada tempatnya", kategori: "Ringan", poin: 10 },
+  { nama: "38. Melakukan tindakan yang mengganggu kebersihan dan keindahan sekolah", kategori: "Ringan", poin: 10 },
+  { nama: "39. Menggunakan fasilitas sekolah tidak pada waktunya atau tanpa izin penanggung jawab", kategori: "Ringan", poin: 10 },
+  { nama: "40. Lupa atau terlambat mengembalikan barang pinjaman milik sekolah", kategori: "Ringan", poin: 10 },
+  { nama: "41. Merusak barang-barang milik orang lain atau sekolah tanpa sengaja", kategori: "Ringan", poin: 10 },
+
+  // =========================================================================
+  // B. PELANGGARAN SEDANG (30 POIN) - Sesuai Handbook Halaman 30
+  // =========================================================================
+  { nama: "1. Mengganggu jalannya ibadah harian sehingga tidak khusyuk dalam ibadah", kategori: "Sedang", poin: 30 },
+  { nama: "2. Membuat keributan atau kegaduhan di kelas atau tempat kegiatan lain", kategori: "Sedang", poin: 30 },
+  { nama: "3. Memprovokasi untuk melakukan keonaran/kegaduhan di dalam atau di luar sekolah", kategori: "Sedang", poin: 30 },
+  { nama: "4. Menghilangkan barang pinjaman milik sekolah maupun orang lain", kategori: "Sedang", poin: 30 },
+  { nama: "5. Menggunakan barang milik orang lain tanpa izin", kategori: "Sedang", poin: 30 },
+  { nama: "6. Membawa dan menggunakan barang yang tidak terkait dengan proses pembelajaran", kategori: "Sedang", poin: 30 },
+  { nama: "7. Menulis, menempel, dan mencorat-coret bukan pada tempatnya", kategori: "Sedang", poin: 30 },
+  { nama: "8. Mengadakan perayaan tidak Islami (ulang tahun, Valentine, Natal, dll.)", kategori: "Sedang", poin: 30 },
+  { nama: "9. Mengecat rambut (putra) atau mengecat kuku dengan kuteks/henna (putri)", kategori: "Sedang", poin: 30 },
+  { nama: "10. Membawa HP (handphone) tanpa izin dari pihak sekolah", kategori: "Sedang", poin: 30 },
+  { nama: "11. Membawa sepeda motor", kategori: "Sedang", poin: 30 },
+  { nama: "12. Tidak berangkat sekolah selama 7 hari tanpa keterangan", kategori: "Sedang", poin: 30 },
+  { nama: "13. Tidak masuk kelas tanpa keterangan/izin selama tiga kali", kategori: "Sedang", poin: 30 },
+  { nama: "14. Memprovokasi untuk melakukan tindakan tidak terpuji, menyakiti diri sendiri, atau mengganggu/menyakiti orang lain, baik verbal maupun nonverbal", kategori: "Sedang", poin: 30 },
+  { nama: "15. Melakukan kemunafikan: berbohong, berkhianat, atau ingkar janji", kategori: "Sedang", poin: 30 },
+  { nama: "16. Menghina atau meremehkan peraturan sekolah", kategori: "Sedang", poin: 30 },
+  { nama: "17. Menghina, mengumpat, mengejek, atau merendahkan sesama teman baik secara langsung maupun melalui media sosial", kategori: "Sedang", poin: 30 },
+  { nama: "18. Memberikan julukan buruk kepada orang lain secara langsung maupun melalui media sosial", kategori: "Sedang", poin: 30 },
+  { nama: "19. Melakukan pelecehan seksual secara verbal", kategori: "Sedang", poin: 30 },
+  { nama: "20. Menyakiti diri sendiri (self-harm)", kategori: "Sedang", poin: 30 },
+  { nama: "21. Enggan meminta maaf dan/atau memaafkan teman", kategori: "Sedang", poin: 30 },
+  { nama: "22. Tidak sopan kepada tamu atau orang lain di sekitar sekolah", kategori: "Sedang", poin: 30 },
+  { nama: "23. Menolak peraturan atau kegiatan yang ditetapkan sekolah", kategori: "Sedang", poin: 30 },
+  { nama: "24. Merusak barang milik orang lain atau fasilitas milik sekolah dengan sengaja", kategori: "Sedang", poin: 30 },
+  { nama: "25. Tidak masuk sekolah tanpa alasan yang diperkenankan oleh sekolah (bolos sekolah)", kategori: "Sedang", poin: 30 },
+  { nama: "26. Menggunakan barang-barang milik orang lain tanpa seizin pemiliknya", kategori: "Sedang", poin: 30 },
+  { nama: "27. Mengubah atau memalsukan administrasi sekolah (surat izin, tanda tangan, dll.)", kategori: "Sedang", poin: 30 },
+  { nama: "28. Menyontek ketika ujian dan/atau memanipulasi hasil penilaian", kategori: "Sedang", poin: 30 },
+  { nama: "29. Berbohong atau memanipulasi teman", kategori: "Sedang", poin: 30 },
+  { nama: "30. Datang ke sekolah di luar jam KBM tanpa izin wali kelas", kategori: "Sedang", poin: 30 },
+  { nama: "31. Menyalahgunakan barang pribadi guru", kategori: "Sedang", poin: 30 },
+  { nama: "32. Tidak menjaga aurat di dalam sekolah", kategori: "Sedang", poin: 30 },
+  { nama: "33. Ke sekolah di luar jam KBM tanpa didampingi wali kelas", kategori: "Sedang", poin: 30 },
+  { nama: "34. Menyuruh orang lain secara tidak patut untuk melakukan hal-hal pribadi, seperti membeli jajanan, mengerjakan tugas/PR, atau mengambilkan barang serta bentuk perintah lainnya." , kategori: "Sedang", poin: 30 },
+// =========================================================================
+  // C. PELANGGARAN BERAT (90 POIN) - Sesuai Handbook Halaman 31 & 32
+  // =========================================================================
+  { nama: "1. Melakukan pelanggaran sedang sebanyak lima kali dalam setahun", kategori: "Berat", poin: 90 },
+  { nama: "2. Tidak berangkat sekolah lebih dari tujuh hari tanpa keterangan", kategori: "Berat", poin: 90 },
+  { nama: "3. Tidak masuk kelas tanpa keterangan/izin lebih dari tiga kali", kategori: "Berat", poin: 90 },
+  { nama: "4. Menghina sekolah, guru, atau karyawan di media sosial", kategori: "Berat", poin: 90 },
+  { nama: "5. Menghina, mengejek, atau merendahkan guru, karyawan, atau orang tua teman", kategori: "Berat", poin: 90 },
+  { nama: "6. Merokok/vape di dalam maupun luar sekolah", kategori: "Berat", poin: 90 },
+  { nama: "7. Mempublikasikan diri di media sosial dalam kegiatan yang tidak sesuai dengan peraturan sekolah dan nilai-nilai Islam", kategori: "Berat", poin: 90 },
+  { nama: "8. Menfitnah, menghasut, atau memprovokasi orang lain untuk melakukan tindakan negatif", kategori: "Berat", poin: 90 },
+  { nama: "9. Mengganggu, mengancam, atau mengintimidasi secara lisan atau tertulis", kategori: "Berat", poin: 90 },
+  { nama: "10. Memalak orang lain di sekolah", kategori: "Berat", poin: 90 },
+  { nama: "11. Melakukan pelecehan seksual secara fisik", kategori: "Berat", poin: 90 },
+  { nama: "12. Bolos sekolah selama dua kali", kategori: "Berat", poin: 90 },
+  { nama: "13. Tidak mengerjakan salat fardu dengan sengaja", kategori: "Berat", poin: 90 },
+  { nama: "14. Penistaan agama", kategori: "Berat", poin: 90 },
+  { nama: "15. Melakukan hal-hal yang tidak sesuai dengan ajaran Islam", kategori: "Berat", poin: 90 },
+  { nama: "16. Berkhalwat atau menjalin hubungan spesial secara tidak Islami", kategori: "Berat", poin: 90 },
+  { nama: "17. Mengakses konten pornografi", kategori: "Berat", poin: 90 },
+  { nama: "18. Membagikan konten pornografi dan penyimpangan lainnya", kategori: "Berat", poin: 90 },
+  { nama: "19. Berkhalwat atau menjalin hubungan khusus melalui media sosial dan mengekspresikannya", kategori: "Berat", poin: 90 },
+  { nama: "20. Mengonsumsi, menyimpan, menggambar, membicarakan, atau memperjualbelikan konten pornografi, LGBT atau penyimpangan lainnya", kategori: "Berat", poin: 90 },
+  { nama: "21. Membawa, membaca, buku yang tidak Islami", kategori: "Berat", poin: 90 },
+  { nama: "22. Menulis cerita atau catatan yang bernuansa pornografi dan LGBT / Penyimpangan lainnya", kategori: "Berat", poin: 90 },
+  { nama: "23. Membawa, membaca buku yang bernuansa pornografi dan LGBT / Penyimpangan lainnya", kategori: "Berat", poin: 90 },
+  { nama: "24. Melakukan kegiatan jual beli yang dilarang oleh sekolah dan agama (Rokok/Vape dll)", kategori: "Berat", poin: 90 },
+  { nama: "25. Merusak peralatan atau gedung sekolah secara sengaja", kategori: "Berat", poin: 90 },
+  { nama: "26. Melakukan kegiatan yang mencemarkan nama baik sekolah", kategori: "Berat", poin: 90 },
+  { nama: "27. Mengunjungi tempat maksiat (diskotek, biliar, karaoke, prostitusi, dll.)", kategori: "Berat", poin: 90 },
+  { nama: "28. Melakukan perjudian/taruhan offline maupun online", kategori: "Berat", poin: 90 },
+  { nama: "29. Menindik atau membuat tato pada anggota tubuh", kategori: "Berat", poin: 90 },
+  { nama: "30. Melakukan pelanggaran sedang sebanyak lima kali dalam setahun", kategori: "Berat", poin: 90 },
+  { nama: "31. Menunjukkan indikasi penyimpangan verbal atau nonverbal", kategori: "Berat", poin: 90 },
+  { nama: "32. Mengikuti kelompok atau komunitas yang berpotensi membahayakan", kategori: "Berat", poin: 90 },
+  { nama: "33. Mencuri atau terlibat dalam pencurian barang milik sekolah atau orang lain", kategori: "Berat", poin: 90 },
+  { nama: "34. Berbohong atau memanipulasi informasi kepada guru", kategori: "Berat", poin: 90 },
+  { nama: "35. Tidak mengakui perkataan dan perbuatan yang dilakukan", kategori: "Berat", poin: 90 },
+  { nama: "36. Menyebarkan isu hoaks", kategori: "Berat", poin: 90 },
+  { nama: "37. Berkelahi hingga tiga kali dalam satu semester", kategori: "Berat", poin: 90 },
+  { nama: "38. Menghasut atau mengghibah orang lain", kategori: "Berat", poin: 90 },
+  { nama: "39. Mengghibah atau mengejek guru dan karyawan", kategori: "Berat", poin: 90 },
+  { nama: "40. Tidak menjaga aurat dan mempublikasikannya di media sosial", kategori: "Berat", poin: 90 },
+
+  // =========================================================================
+  // D. PELANGGARAN SANGAT BERAT (180 POIN) - Sesuai Handbook Halaman 32
+  // =========================================================================
+  { nama: "1. Melakukan pelanggaran berat sebanyak empat kali", kategori: "Sangat Berat", poin: 270 },
+  { nama: "2. Mengajak dan melakukan aksi kekerasan fisik, seksual, verbal, maupun nonverbal", kategori: "Sangat Berat", poin: 270 },
+  { nama: "3. Melakukan dan mengajak aksi penyimpangan", kategori: "Sangat Berat", poin: 270 },
+  { nama: "4. Melakukan tindakan kriminal", kategori: "Sangat Berat", poin: 270 },
+  { nama: "5. Mempublikasikan atau berkomunikasi online (video call tanpa busana)", kategori: "Sangat Berat", poin: 270 },
+  { nama: "6. Melakukan aksi tawuran", kategori: "Sangat Berat", poin: 270 },
+  { nama: "7. Melakukan tindakan anarkis", kategori: "Sangat Berat", poin: 270 },
+  { nama: "8. Terlibat dalam prostitusi online maupun offline", kategori: "Sangat Berat", poin: 270 },
+  { nama: "9. Menggunakan atau menyebarkan narkoba, obat-obatan terlarang, zat adiktif, serta minuman haram", kategori: "Sangat Berat", poin: 270 },
+  { nama: "10. Melakukan perbuatan zina", kategori: "Sangat Berat", poin: 270 },
+  { nama: "11. Melakukan pelanggaran berat tiga kali dengan jenis yang sama", kategori: "Sangat Berat", poin: 270 },
+  { nama: "12. Melakukan pelanggaran berat empat kali dengan jenis yang berbeda", kategori: "Sangat Berat", poin: 270 },
 ];
 
-const JENIS_APRESIASI = [
+  const JENIS_APRESIASI = [
   { id:1, nama:"Juara Kecamatan", pengurangan:20 },
   { id:2, nama:"Juara Kota", pengurangan:30 },
   { id:3, nama:"Juara Provinsi", pengurangan:50 },
@@ -55,9 +187,9 @@ const JENIS_APRESIASI = [
 const INITIAL_PELANGGARAN = [
   { id:1, nisn:"0011", nama:"Ahmad Fauzi", kelas:"7A", jenis:"Terlambat masuk sekolah", kategori:"Ringan", poin:10, tanggal:"2025-05-10", guru:"Guru BK", foto:"" },
   { id:2, nisn:"0012", nama:"Bunga Rahmawati", kelas:"7A", jenis:"Tidak menggunakan seragam lengkap", kategori:"Ringan", poin:10, tanggal:"2025-05-12", guru:"Wali Kelas 7A", foto:"" },
-  { id:3, nisn:"0013", nama:"Dafa Ardiansyah", kelas:"7B", jenis:"Membolos pelajaran", kategori:"Sedang", poin:25, tanggal:"2025-05-15", guru:"Guru BK", foto:"" },
-  { id:4, nisn:"0011", nama:"Ahmad Fauzi", kelas:"7A", jenis:"Berbicara tidak sopan", kategori:"Sedang", poin:25, tanggal:"2025-05-18", guru:"Wali Kelas 7A", foto:"" },
-  { id:5, nisn:"0015", nama:"Farhan Maulana", kelas:"8A", jenis:"Berkelahi", kategori:"Berat", poin:100, tanggal:"2025-05-20", guru:"Kesiswaan", foto:"" },
+  { id:3, nisn:"0013", nama:"Dafa Ardiansyah", kelas:"7B", jenis:"Membolos pelajaran", kategori:"Sedang", poin:30, tanggal:"2025-05-15", guru:"Guru BK", foto:"" },
+  { id:4, nisn:"0011", nama:"Ahmad Fauzi", kelas:"7A", jenis:"Berbicara tidak sopan", kategori:"Sedang", poin:30, tanggal:"2025-05-18", guru:"Wali Kelas 7A", foto:"" },
+  { id:5, nisn:"0015", nama:"Farhan Maulana", kelas:"8A", jenis:"Berkelahi", kategori:"Berat", poin:90, tanggal:"2025-05-20", guru:"Kesiswaan", foto:"" },
 ];
 
 const INITIAL_APRESIASI = [
@@ -111,13 +243,67 @@ const getAkumulasiPoin = (nisn, pelanggaran, apresiasi) => {
 };
 
 const getSP = (poin) => {
-  if (poin >= 500) return { level: "Pengembalian", color: "#7c1b1b", bg: "#fee2e2" };
-  if (poin >= 400) return { level: "Sidang Disiplin", color: "#92400e", bg: "#fef3c7" };
-  if (poin >= 300) return { level: "SP3 - Kritis", color: "#dc2626", bg: "#fee2e2" };
-  if (poin >= 200) return { level: "SP2 - Waspada", color: "#d97706", bg: "#fef3c7" };
-  if (poin >= 100) return { level: "SP1 - Perhatian", color: "#2563eb", bg: "#dbeafe" };
-  if (poin >= 50) return { level: "Pantauan BK", color: "#059669", bg: "#d1fae5" };
-  return { level: "Normal", color: "#6b7280", bg: "#f3f4f6" };
+  if (poin > 270) {
+    return { 
+      level: "Pelanggaran Sangat Berat", 
+      color: "#7F1D1D", 
+      bg: "#fee2e2",
+      pj: "Kepala Sekolah",
+      tindakLanjut: "Kasus diserahkan kepada Kepala Sekolah. Orang tua dipanggil untuk musyawarah dan sekolah dapat mengembalikan siswa kepada orang tua sesuai ketentuan yang berlaku."
+    };
+  }
+  if (poin === 270) {
+    return { 
+      level: "Pelanggaran Berat (SP3)", 
+      color: "#B91C1C", 
+      bg: "#fee2e2",
+      pj: "Waka Kesiswaan & Kepala Sekolah",
+      tindakLanjut: "Penerbitan SP3, pemanggilan orang tua, pembinaan terakhir, serta pemberitahuan bahwa pelanggaran berikutnya akan diproses ke tahap sangat berat."
+    };
+  }
+  if (poin >= 180 && poin <= 269) {
+    return { 
+      level: "Pelanggaran Berat (SP2)", 
+      color: "#DC2626", 
+      bg: "#fee2e2",
+      pj: "Wakil Kepala Sekolah Bidang Kesiswaan",
+      tindakLanjut: "Penerbitan SP2, pembinaan lanjutan, pemanggilan orang tua kembali, evaluasi perilaku siswa, dan kontrak pembinaan yang lebih ketat."
+    };
+  }
+  if (poin >= 90 && poin <= 179) {
+    return { 
+      level: "Pelanggaran Berat (SP1)", 
+      color: "#EA580C", 
+      bg: "#ffedd5",
+      pj: "Wakil Kepala Sekolah Bidang Kesiswaan",
+      tindakLanjut: "Penerbitan SP1, pembinaan bersama Waka Kesiswaan dan BK, pemanggilan orang tua, penandatanganan surat pernyataan, serta pemberian konsekuensi sesuai tata tertib sekolah."
+    };
+  }
+  if (poin >= 31 && poin <= 89) {
+    return { 
+      level: "Pelanggaran Sedang", 
+      color: "#D97706", 
+      bg: "#fef3c7",
+      pj: "Guru BK",
+      tindakLanjut: "Pembinaan bersama BK, komunikasi dengan orang tua, konseling, pemberian konsekuensi yang bersifat mendidik, serta pemantauan secara berkala."
+    };
+  }
+  if (poin >= 10 && poin <= 30) {
+    return { 
+      level: "Pelanggaran Ringan", 
+      color: "#2563eb", 
+      bg: "#dbeafe",
+      pj: "Wali Kelas",
+      tindakLanjut: "Pembinaan oleh wali kelas, komunikasi dengan orang tua, pemberian konsekuensi edukatif sesuai jenis pelanggaran, serta pemantauan perubahan perilaku."
+    };
+  }
+  return { 
+    level: "Aman / Normal", 
+    color: "#4B5563", 
+    bg: "#f3f4f6",
+    pj: "Wali Kelas",
+    tindakLanjut: "Pemantauan perkembangan perilaku berkala oleh Wali Kelas."
+  };
 };
 
 const totalVocabSiswa = (nisn, vocab) => vocab.filter(v => v.nisn === nisn).reduce((s, v) => s + v.jumlah, 0);
@@ -249,7 +435,7 @@ const MENUS = {
     { key: "pelanggaran", icon: "⚠️", label: "Pelanggaran" },
     { key: "apresiasi", icon: "🏆", label: "Apresiasi" },
     { key: "qiroati", icon: "📖", label: "Qiroati" },
-    { key: "vocab", icon: "🔤", label: "Vocab" },
+    { key: "vocab", icon: "📘", label: "Vocab" },
     { key: "absensi", icon: "📋", label: "Absensi" },
     { key: "catatan", icon: "📝", label: "Catatan Kejadian" },
     { key: "laporan", icon: "📊", label: "Laporan" },
@@ -258,46 +444,62 @@ const MENUS = {
     { key: "dashboard", icon: "🏠", label: "Dashboard" },
     { key: "siswa", icon: "👥", label: "Data Siswa" },
     { key: "pelanggaran", icon: "⚠️", label: "Pelanggaran" },
-    { key: "apresiasi", icon: "🏆", label: "Apresiasi" },
-    { key: "qiroati", icon: "📖", label: "Qiroati" },
-    { key: "vocab", icon: "🔤", label: "Vocab" },
     { key: "catatan", icon: "📝", label: "Catatan Kejadian" },
+    { key: "apresiasi", icon: "🏆", label: "Apresiasi" },
+    { key: "absensi", icon: "📋", label: "Absensi" },
+    { key: "vocab", icon: "📘", label: "Vocab" },
+    { key: "qiroati", icon: "📖", label: "Qiroati" },
     { key: "laporan", icon: "📊", label: "Laporan" },
   ],
   bk: [
     { key: "dashboard", icon: "🏠", label: "Dashboard" },
     { key: "siswa", icon: "👥", label: "Data Siswa" },
     { key: "pelanggaran", icon: "⚠️", label: "Pelanggaran" },
-    { key: "apresiasi", icon: "🏆", label: "Apresiasi" },
     { key: "catatan", icon: "📝", label: "Catatan Kejadian" },
+    { key: "apresiasi", icon: "🏆", label: "Apresiasi" },
+    { key: "absensi", icon: "📋", label: "Absensi" },
+    { key: "vocab", icon: "📘", label: "Vocab" },
+    { key: "qiroati", icon: "📖", label: "Qiroati" },
     { key: "laporan", icon: "📊", label: "Laporan" },
   ],
   kesiswaan: [
     { key: "dashboard", icon: "🏠", label: "Dashboard" },
     { key: "siswa", icon: "👥", label: "Data Siswa" },
     { key: "pelanggaran", icon: "⚠️", label: "Pelanggaran" },
-    { key: "apresiasi", icon: "🏆", label: "Apresiasi" },
     { key: "catatan", icon: "📝", label: "Catatan Kejadian" },
+    { key: "apresiasi", icon: "🏆", label: "Apresiasi" },
+    { key: "absensi", icon: "📋", label: "Absensi" },
+    { key: "vocab", icon: "📘", label: "Vocab" },
+    { key: "qiroati", icon: "📖", label: "Qiroati" },
     { key: "laporan", icon: "📊", label: "Laporan" },
   ],
+  // === BERIKUT ROLE BARU TAMBAHAN KITA ===
   walas: [
     { key: "dashboard", icon: "🏠", label: "Dashboard" },
     { key: "siswa", icon: "👥", label: "Data Siswa" },
-    { key: "absensi", icon: "📋", label: "Absensi" },
     { key: "pelanggaran", icon: "⚠️", label: "Pelanggaran" },
-    { key: "apresiasi", icon: "🏆", label: "Apresiasi" },
-    { key: "vocab", icon: "🔤", label: "Input Vocab" },
     { key: "catatan", icon: "📝", label: "Catatan Kejadian" },
+    { key: "apresiasi", icon: "🏆", label: "Apresiasi" },
+    { key: "absensi", icon: "📋", label: "Absensi" },
+    { key: "vocab", icon: "📘", label: "Vocab" },
+    { key: "qiroati", icon: "📖", label: "Qiroati" },
+    { key: "laporan", icon: "📊", label: "Laporan" },
   ],
-  qiroati: [
+  guru_mapel: [
     { key: "dashboard", icon: "🏠", label: "Dashboard" },
-    { key: "qiroati", icon: "📖", label: "Input Qiroati" },
-    { key: "laporan", icon: "📊", label: "Laporan Qiroati" },
+    { key: "siswa", icon: "👥", label: "Data Siswa" },
+    { key: "pelanggaran", icon: "⚠️", label: "Pelanggaran" },
+    { key: "catatan", icon: "📝", label: "Catatan Kejadian" },
+    { key: "apresiasi", icon: "🏆", label: "Apresiasi" },
+    { key: "absensi", icon: "📋", label: "Absensi" },
   ],
   bilingual: [
     { key: "dashboard", icon: "🏠", label: "Dashboard" },
-    { key: "vocab", icon: "🔤", label: "Input Vocab" },
-    { key: "laporan", icon: "📊", label: "Laporan Vocab" },
+    { key: "guru", icon: "👨‍🏫", label: "Data Guru" },
+    { key: "siswa", icon: "👥", label: "Data Siswa" },
+    { key: "vocab", icon: "📘", label: "Vocab" },
+    { key: "apresiasi", icon: "🏆", label: "Apresiasi" },
+    { key: "laporan", icon: "📊", label: "Laporan" },
   ],
   ortu: [
     { key: "dashboard", icon: "🏠", label: "Dashboard Anak" },
@@ -312,6 +514,25 @@ export default function App() {
 
   // State data
   const [siswa, setSiswa] = useState(INITIAL_SISWA);
+  useEffect(() => {
+  ambilDataSiswa()
+}, [])
+
+async function ambilDataSiswa() {
+  const { data, error } = await supabase
+    .from('siswa')
+
+    .select('*')
+console.log('DATA SISWA PERTAMA =', data[0])
+console.log('ERROR SISWA =', error)
+
+  if (error) {
+    console.error(error)
+    return
+  }
+
+  setSiswa(data)
+}
   const [pelanggaran, setPelanggaran] = useState(INITIAL_PELANGGARAN);
   const [apresiasi, setApresiasi] = useState(INITIAL_APRESIASI);
   const [hafalan, setHafalan] = useState(INITIAL_HAFALAN);
@@ -335,8 +556,16 @@ export default function App() {
         {/* Logo */}
         <div style={{ padding: "18px 16px", borderBottom: "1px solid rgba(255,255,255,.12)" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div style={{ width: 36, height: 36, borderRadius: 10, background: C.gold, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>☪</div>
-            {sidebarOpen && (
+            <img
+  src={logoAlirsyad}
+  alt="Logo Al-Irsyad"
+  style={{
+    width: "50px",
+    height: "50px",
+    objectFit: "contain"
+  }}
+/>
+          {sidebarOpen && (
               <div>
                 <div style={{ color: C.white, fontWeight: 700, fontSize: 12, lineHeight: 1.3 }}>SMS Al-Irsyad</div>
                 <div style={{ color: "rgba(255,255,255,.6)", fontSize: 10 }}>Kota Cirebon</div>
@@ -421,12 +650,85 @@ function LoginPage({ onLogin, users, siswa, pelanggaran, apresiasi, hafalan }) {
     } catch(e) {}
   }, []);
 
-  const handleLogin = () => {
-    const u = users.find(u => u.username === username && u.password === password);
-    if (!u) { setError("Username atau password salah"); return; }
-    if (remember) localStorage.setItem("sms_saved_login", JSON.stringify({ username, password }));
-    else localStorage.removeItem("sms_saved_login");
-    onLogin(u);
+   const handleLogin = async (e) => {
+    e.preventDefault();
+    setError(""); // Reset pesan error dulu
+
+    try {
+      // 1. LOGIN KE SUPABASE AUTH
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: username,    // Mengambil nilai dari input state username (baris 411)
+        password: password, // Mengambil nilai dari input state password (baris 412)
+      });
+
+      // 2. JIKA LOGIN GAGAL
+      if (error) {
+        setError("Username atau password salah");
+        console.error("Gagal login:", error.message);
+        return;
+      }
+
+      // 3. JIKA BERHASIL LOGIN, PROSES ATUR ROLE & IDENTITAS USER
+      if (data?.user) {
+        console.log("Login Supabase Sukses!", data.user);
+        
+        // Ambil teks sebelum karakter @ (Contoh: walas8a@alirsyad.com -> walas8a)
+        const detectedUsername = data.user.email.split('@')[0].toLowerCase(); 
+        
+        let detectedRole = 'guru_mapel'; // Role bawaan standard jika tidak lolos seleksi di bawah
+        let displayName = 'Guru Mata Pelajaran';
+        let nomorWAOrangTua = ''; 
+
+        // PENYARINGAN KATA KUNCI EMAIL KE ROLE APLIKASI
+        if (detectedUsername === 'admin') {
+          detectedRole = 'admin';
+          displayName = 'Administrator';
+        } else if (detectedUsername === 'bk') {
+          detectedRole = 'bk';
+          displayName = 'Guru BK';
+        } else if (detectedUsername === 'kesiswaan') {
+          detectedRole = 'kesiswaan';
+          displayName = 'Kesiswaan';
+        } else if (detectedUsername === 'kepsek' || detectedUsername === 'kepala_sekolah') {
+          detectedRole = 'kepsek';
+          displayName = 'Kepala Sekolah';
+        } else if (detectedUsername === 'bilingual' || detectedUsername === 'pj_bilingual') {
+          detectedRole = 'bilingual';
+          displayName = 'PJ Bilingual';
+        } else if (detectedUsername.startsWith('walas')) {
+          // Mendeteksi format terpisah seperti walas7a, walas8b, walas9d, dll.
+          detectedRole = 'walas'; 
+          const kelas = detectedUsername.replace('walas', '').toUpperCase();
+          displayName = `Wali Kelas ${kelas}`;
+        } else if (detectedUsername.startsWith('ortu')) {
+          // Mendeteksi format ortu_081234567890
+          detectedRole = 'ortu'; 
+          displayName = 'Orang Tua Siswa';
+          // Ambil nomor WA-nya (Contoh: ortu_08123456789 -> 08123456789)
+          nomorWAOrangTua = detectedUsername.replace('ortu_', ''); 
+        } else if (detectedUsername.startsWith('guru')) {
+          detectedRole = 'guru_mapel';
+          displayName = 'Guru Mapel';
+        }
+
+        // BUNGKUS MENJADI DATA USER JADI-PAKAI UNTUK DASHBOARD
+        const userKomplit = {
+          id: data.user.id,
+          username: detectedUsername,
+          email: data.user.email,
+          role: detectedRole, 
+          name: displayName,
+          whatsapp: nomorWAOrangTua // Mengirim data WA khusus untuk akun orang tua
+        };
+
+        // Kirim data komplit ini ke state/fungsi login utama aplikasi kamu
+        onLogin(userKomplit); 
+      }
+
+    } catch (err) {
+      console.error("Sistem error:", err);
+      setError("Username atau password salah");
+    }
   };
 
   // Marquee achievements
@@ -449,18 +751,31 @@ function LoginPage({ onLogin, users, siswa, pelanggaran, apresiasi, hafalan }) {
 
       <div style={{ background: C.white, borderRadius: 20, boxShadow: "0 20px 60px rgba(0,0,0,.25)", padding: 40, width: "100%", maxWidth: 420 }}>
         {/* Logo */}
-        <div style={{ textAlign: "center", marginBottom: 28 }}>
-          <div style={{ width: 70, height: 70, borderRadius: 16, background: `linear-gradient(135deg, ${C.emerald}, ${C.emeraldDark})`, margin: "0 auto 14px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 32 }}>☪️</div>
-          <div style={{ fontWeight: 800, fontSize: 18, color: C.emeraldDark }}>SMS Al-Irsyad</div>
-          <div style={{ color: C.gray600, fontSize: 13 }}>SMP Al-Irsyad Al-Islamiyyah</div>
-          <div style={{ color: C.gold, fontSize: 12, fontWeight: 600 }}>Kota Cirebon</div>
-        </div>
+    <div style={{ textAlign: "center", marginBottom: 28 }}>
+      <img 
+        src={logoAlirsyad} 
+        alt="Logo Al-Irsyad" 
+        style={{ 
+          width: "90px", 
+          height: "90px", 
+          objectFit: "contain", 
+          margin: "0 auto 12px auto", 
+          display: "block" 
+        }} 
+      />
+      <div style={{ fontWeight: 800, fontSize: 18, color: C.emeraldDark }}>SMS AL-IRSYAD</div>
+      <div style={{ color: C.emeraldDark, fontSize: 13, fontWeight: 600, marginTop: -2, marginBottom: 4 }}>
+        (Sistem Monitoring Siswa)
+      </div>
+      <div style={{ color: C.emeraldMid, fontSize: 13, fontWeight: 600 }}>SMP AL-IRSYAD AL-ISLAMIYYAH</div>
+      <div style={{ color: C.emeraldMid, fontSize: 12, fontWeight: 600 }}>KOTA CIREBON</div>
+    </div>
 
         <div style={{ background: C.emeraldLight, borderRadius: 10, padding: "10px 14px", marginBottom: 20, fontSize: 12, color: C.emeraldDark, textAlign: "center" }}>
           بِسْمِ اللهِ الرَّحْمٰنِ الرَّحِيْمِ
         </div>
 
-        <Input label="Username / No. HP" value={username} onChange={e => setUsername(e.target.value)} placeholder="Masukkan username..." />
+        <Input label="Email" value={username} onChange={e => setUsername(e.target.value)} placeholder="Masukkan email..." />
         <Input label="Password" type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Masukkan password..." onKeyDown={e => e.key === "Enter" && handleLogin()} />
 
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
@@ -473,13 +788,6 @@ function LoginPage({ onLogin, users, siswa, pelanggaran, apresiasi, hafalan }) {
         <Btn onClick={handleLogin} style={{ width: "100%" }}>Masuk →</Btn>
 
         <div style={{ marginTop: 20, padding: "12px", background: C.gray50, borderRadius: 8, fontSize: 11, color: C.gray600 }}>
-          <div style={{ fontWeight: 700, marginBottom: 6 }}>Demo Akun:</div>
-          <div>Admin: admin / admin123</div>
-          <div>Kepsek: kepsek / kepsek123</div>
-          <div>BK: bk / bk123 | Kesiswaan: kesiswaan / kesiswaan123</div>
-          <div>Walas: walas7a / walas123</div>
-          <div>Qiroati: qiroati / qiroati123 | Bilingual: bilingual / bilingual123</div>
-          <div>Ortu: 0812345678 / ortu123</div>
         </div>
       </div>
     </div>
@@ -533,9 +841,9 @@ function DashboardUtama({ user, siswa, pelanggaran, apresiasi, hafalan, vocab, c
   const vocabKelas = KELAS_LIST.slice(0, 6).map(k => ({ label: k, value: vocab.filter(v => siswa.find(s => s.nisn === v.nisn && s.kelas === k)).reduce((s, v) => s + v.jumlah, 0) }));
 
   // SP counts
-  const sp1 = siswa.filter(s => { const p = getAkumulasiPoin(s.nisn, pelanggaran, apresiasi); return p >= 100 && p < 200; }).length;
-  const sp2 = siswa.filter(s => { const p = getAkumulasiPoin(s.nisn, pelanggaran, apresiasi); return p >= 200 && p < 300; }).length;
-  const sp3 = siswa.filter(s => { const p = getAkumulasiPoin(s.nisn, pelanggaran, apresiasi); return p >= 300; }).length;
+  const sp1 = siswa.filter(s => { const p = getAkumulasiPoin(s.nisn, pelanggaran, apresiasi); return p >= 90 && p < 179; }).length;
+  const sp2 = siswa.filter(s => { const p = getAkumulasiPoin(s.nisn, pelanggaran, apresiasi); return p >= 180 && p < 269; }).length;
+  const sp3 = siswa.filter(s => { const p = getAkumulasiPoin(s.nisn, pelanggaran, apresiasi); return p >= 270; }).length;
 
   const roleLabel = { admin: "Admin", kepsek: "Kepala Sekolah", bk: "Guru BK", kesiswaan: "Kesiswaan", walas: "Wali Kelas", qiroati: "Guru Qiroati", bilingual: "PJ Bilingual" };
 
@@ -554,9 +862,9 @@ function DashboardUtama({ user, siswa, pelanggaran, apresiasi, hafalan, vocab, c
         <StatCard icon="⚠️" label="Total Pelanggaran" value={totalPelanggaran} color={C.red} sub="Semua kelas" />
         <StatCard icon="🏆" label="Total Apresiasi" value={totalApresiasi} color={C.gold} sub="Semua siswa" />
         <StatCard icon="📖" label="Setoran Hafalan" value={totalHafalan} color={C.blue} sub="Total setoran" />
-        <StatCard icon="📋" label="SP1" value={sp1} color="#2563eb" sub="100-199 poin" />
-        <StatCard icon="🔴" label="SP2" value={sp2} color="#d97706" sub="200-299 poin" />
-        <StatCard icon="🚨" label="SP3 / Kritis" value={sp3} color={C.red} sub="300+ poin" />
+        <StatCard icon="📋" label="SP1" value={sp1} color={C.red} sub="90-179 poin" />
+        <StatCard icon="🔴" label="SP2" value={sp2} color={C.red} sub="180-269 poin" />
+        <StatCard icon="🚨" label="SP3 / Kritis" value={sp3} color={C.red} sub="270+ poin" />
       </div>
 
       {/* Charts Row */}
@@ -730,10 +1038,12 @@ function ModulSiswa({ user, siswa, setSiswa }) {
 
   const canEdit = ["admin", "kepsek", "bk", "kesiswaan", "walas"].includes(user.role);
 
-  const filtered = siswa.filter(s =>
-    (s.nama.toLowerCase().includes(search.toLowerCase()) || s.nisn.includes(search)) &&
-    (kelasFilter === "" || s.kelas === kelasFilter)
-  );
+  const filtered = siswa.filter((s) =>
+  ((s.nama || "").toLowerCase().includes(search.toLowerCase()) ||
+   (s.nisn || "").includes(search))
+  &&
+  (kelasFilter === "" || s.kelas === kelasFilter)
+)
 
   const openAdd = () => { setEdit(null); setForm({ nisn:"", nipd:"", nama:"", jk:"L", tempatLahir:"", tglLahir:"", kelas:"7A", foto:"", namaAyah:"", namaIbu:"", noWa:"", alamat:"", aktif:true }); setModal(true); };
   const openEdit = (s) => { setEdit(s.nisn); setForm({ ...s }); setModal(true); };
@@ -821,20 +1131,20 @@ function ModulPelanggaran({ user, siswa, pelanggaran, setPelanggaran, apresiasi 
   const [searchSiswa, setSearchSiswa] = useState("");
   const [form, setForm] = useState({ nisn:"", kelas:"", jenis:"", kategori:"Ringan", poin:10, tanggal: new Date().toISOString().split("T")[0], guru: user.name });
   const [viewSP, setViewSP] = useState(null);
-
-  const canEdit = ["admin", "bk", "kesiswaan", "walas", "kepsek"].includes(user.role);
-  const filteredSiswa = siswa.filter(s => (searchSiswa === "" || s.nama.toLowerCase().includes(searchSiswa.toLowerCase()) || s.kelas === searchSiswa) && (form.kelas === "" || s.kelas === form.kelas));
-
-  const filtered = pelanggaran.filter(p =>
-    (p.nama?.toLowerCase().includes(search.toLowerCase()) || p.kelas?.includes(search)) &&
+  const canEdit = ["admin", "bk", "kesiswaan", "walas", "mapel", "kepsek"].includes(user.role);
+  const filteredSiswa = siswa.filter(s => (searchSiswa === "" || s.nama.toLowerCase().includes(searchSiswa.toLowerCase())) && (kelasFilter === "" || s.kelas === kelasFilter));
+const [kategoriFilter, setKategoriFilter]= useState("");
+  const filtered = pelanggaran.filter(p => 
+    (search === "" || p.nama?.toLowerCase().includes(search.toLowerCase()) || p.kelas?.includes(search)) && 
     (kelasFilter === "" || p.kelas === kelasFilter)
-  );
-
+); 
   const handleJenisChange = (e) => {
     const j = JENIS_PELANGGARAN.find(jp => jp.nama === e.target.value);
     if (j) setForm(f => ({ ...f, jenis: j.nama, kategori: j.kategori, poin: j.poin }));
   };
-
+const jenisFiltered = JENIS_PELANGGARAN.filter(
+  j => kategoriFilter === "" || j.kategori === kategoriFilter
+);  
   const handleSiswaSelect = (s) => {
     setForm(f => ({ ...f, nisn: s.nisn, kelas: s.kelas }));
     setSearchSiswa(s.nama);
@@ -859,7 +1169,9 @@ function ModulPelanggaran({ user, siswa, pelanggaran, setPelanggaran, apresiasi 
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
         <div>
           <div style={{ fontWeight: 800, fontSize: 20, color: C.emeraldDark }}>⚠️ Modul Pelanggaran</div>
-          <div style={{ color: C.gray600, fontSize: 13 }}>Panduan: 1-99 (Pantauan Walas) | 100-199 (BK) | 200-299 (Kesiswaan) | 300+ (Kritis)</div>
+<p className="text-sm text-gray-500 mt-1">
+  Panduan: 10–30 (Ringan) | 31–89 (Sedang) | 90–179 (SP1) | 180–269 (SP2) | ≥270 (SP3 / Sangat Berat)
+</p>
         </div>
         {canEdit && <Btn onClick={() => { setForm({ nisn:"", kelas:"", jenis:"", kategori:"Ringan", poin:10, tanggal: new Date().toISOString().split("T")[0], guru: user.name }); setSearchSiswa(""); setModal(true); }}>+ Input Pelanggaran</Btn>}
       </div>
@@ -938,7 +1250,38 @@ function ModulPelanggaran({ user, siswa, pelanggaran, setPelanggaran, apresiasi 
           )}
           {form.nisn && <div style={{ fontSize: 12, color: C.emerald, marginTop: 4 }}>✓ Siswa dipilih: {searchSiswa} ({form.kelas})</div>}
         </div>
-        <Select label="Jenis Pelanggaran" value={form.jenis} onChange={handleJenisChange} options={[{ value: "", label: "-- Pilih jenis --" }, ...JENIS_PELANGGARAN.map(j => ({ value: j.nama, label: `${j.nama} (${j.kategori} - ${j.poin} poin)` }))]} />
+        <Select
+  label="Kategori Pelanggaran"
+  value={kategoriFilter}
+  onChange={(e)=>{
+      setKategoriFilter(e.target.value);
+      setForm(f=>({
+         ...f,
+         jenis:"",
+         kategori:"",
+         poin:0
+      }));
+  }}
+  options={[
+     {value:"",label:"-- Pilih Kategori --"},
+     {value:"Ringan",label:"Ringan"},
+     {value:"Sedang",label:"Sedang"},
+     {value:"Berat",label:"Berat"},
+     {value:"Sangat Berat",label:"Sangat Berat"},
+  ]}
+/>
+<Select
+  label="Jenis Pelanggaran"
+  value={form.jenis}
+  onChange={handleJenisChange}
+  options={[
+      {value:"",label:"-- Pilih Jenis --"},
+      ...jenisFiltered.map(j=>({
+          value:j.nama,
+          label:j.nama
+      }))
+  ]}
+/>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 16px" }}>
           <Input label="Kategori" value={form.kategori} readOnly style={{ background: C.gray50 }} />
           <Input label="Poin" type="number" value={form.poin} onChange={e => setForm(f => ({ ...f, poin: parseInt(e.target.value) || 0 }))} />
@@ -948,7 +1291,83 @@ function ModulPelanggaran({ user, siswa, pelanggaran, setPelanggaran, apresiasi 
           <Btn variant="ghost" onClick={() => setModal(false)}>Batal</Btn>
           <Btn onClick={handleSave}>Simpan</Btn>
         </div>
-      </Modal>
+      </Modal> 
+          {/* Kotak Panduan Alur PJ & Tindak Lanjut Sekolah */}
+<div style={{ 
+  marginTop: "20px", 
+  backgroundColor: "#ffffff", 
+  padding: "16px", 
+  borderRadius: "8px", 
+  boxShadow: "0 1px 3px 0 rgba(0, 0, 0, 0.1)",
+  border: "1px solid #e5e7eb" 
+}}>
+  <h4 style={{ fontWeight: 700, color: "#111827", marginBottom: "12px", fontSize: "14px" }}>
+    ℹ️ Alur & Tindak Lanjut Berdasarkan Akumulasi Poin
+  </h4>
+  <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+    
+    {/* Ringan */}
+    <div style={{ padding: "8px 12px", backgroundColor: "#dbeafe", borderRadius: "6px", borderLeft: "4px solid #2563eb" }}>
+      <div style={{ fontSize: "12px", color: "#1e40af" }}>
+        <strong>10–30 Poin (Pelanggaran Ringan)</strong> — <span style={{ fontWeight: 600 }}>PJ: Wali Kelas</span>
+      </div>
+      <div style={{ fontSize: "11px", color: "#1e40af", marginTop: "2px" }}>
+        Tindak Lanjut: Pembinaan oleh wali kelas, komunikasi dengan orang tua, pemberian konsekuensi edukatif sesuai jenis pelanggaran, serta pemantauan perubahan perilaku.
+      </div>
+    </div>
+
+    {/* Sedang */}
+    <div style={{ padding: "8px 12px", backgroundColor: "#fef3c7", borderRadius: "6px", borderLeft: "4px solid #d97706" }}>
+      <div style={{ fontSize: "12px", color: "#92400e" }}>
+        <strong>31–89 Poin (Pelanggaran Sedang)</strong> — <span style={{ fontWeight: 600 }}>PJ: Guru BK</span>
+      </div>
+      <div style={{ fontSize: "11px", color: "#92400e", marginTop: "2px" }}>
+        Tindak Lanjut: Pembinaan bersama BK, komunikasi dengan orang tua, konseling, pemberian konsekuensi yang bersifat mendidik, serta pemantauan secara berkala.
+      </div>
+    </div>
+
+    {/* SP1 */}
+    <div style={{ padding: "8px 12px", backgroundColor: "#ffedd5", borderRadius: "6px", borderLeft: "4px solid #ea580c" }}>
+      <div style={{ fontSize: "12px", color: "#7c2d12" }}>
+        <strong>90–179 Poin (Pelanggaran Berat - SP1)</strong> — <span style={{ fontWeight: 600 }}>PJ: Waka Kesiswaan</span>
+      </div>
+      <div style={{ fontSize: "11px", color: "#7c2d12", marginTop: "2px" }}>
+        Tindak Lanjut: Penerbitan SP1, pembinaan bersama Waka Kesiswaan dan BK, pemanggilan orang tua, penandatanganan surat pernyataan, serta pemberian konsekuensi sesuai tata tertib sekolah.
+      </div>
+    </div>
+
+    {/* SP2 */}
+    <div style={{ padding: "8px 12px", backgroundColor: "#fee2e2", borderRadius: "6px", borderLeft: "4px solid #dc2626" }}>
+      <div style={{ fontSize: "12px", color: "#991b1b" }}>
+        <strong>180–269 Poin (Pelanggaran Berat - SP2)</strong> — <span style={{ fontWeight: 600 }}>PJ: Waka Kesiswaan</span>
+      </div>
+      <div style={{ fontSize: "11px", color: "#991b1b", marginTop: "2px" }}>
+        Tindak Lanjut: Penerbitan SP2, pembinaan lanjutan, pemanggilan orang tua kembali, evaluasi perilaku siswa, dan kontrak pembinaan yang lebih ketat.
+      </div>
+    </div>
+
+    {/* SP3 */}
+    <div style={{ padding: "8px 12px", backgroundColor: "#fee2e2", borderRadius: "6px", borderLeft: "4px solid #b91c1c" }}>
+      <div style={{ fontSize: "12px", color: "#7f1d1d" }}>
+        <strong>Tepat 270 Poin (Pelanggaran Berat - SP3)</strong> — <span style={{ fontWeight: 600 }}>PJ: Waka Kesiswaan & Kepala Sekolah</span>
+      </div>
+      <div style={{ fontSize: "11px", color: "#7f1d1d", marginTop: "2px" }}>
+        Tindak Lanjut: Penerbitan SP3, pemanggilan orang tua, pembinaan terakhir, serta pemberitahuan bahwa pelanggaran berikutnya akan diproses ke tahap sangat berat.
+      </div>
+    </div>
+
+    {/* Sangat Berat */}
+    <div style={{ padding: "8px 12px", backgroundColor: "#fecaca", borderRadius: "6px", borderLeft: "4px solid #7f1d1d" }}>
+      <div style={{ fontSize: "12px", color: "#7f1d1d" }}>
+        <strong>{"> 270 Poin (Pelanggaran Sangat Berat)"}</strong> — <span style={{ fontWeight: 600 }}>PJ: Kepala Sekolah</span>
+      </div>
+      <div style={{ fontSize: "11px", color: "#7f1d1d", marginTop: "2px" }}>
+        Tindak Lanjut: Kasus diserahkan kepada Kepala Sekolah. Orang tua dipanggil untuk musyawarah dan sekolah dapat mengembalikan siswa kepada orang tua sesuai ketentuan yang berlaku.
+      </div>
+    </div>
+
+  </div>
+</div>
     </div>
   );
 }
@@ -1564,9 +1983,9 @@ function ModulLaporan({ user, siswa, pelanggaran, apresiasi, hafalan, vocab, cat
         <div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 14, marginBottom: 20 }}>
             <StatCard icon="⚠️" label="Total Pelanggaran" value={pelanggaran.length} color={C.red} />
-            <StatCard icon="📋" label="SP1 (100-199)" value={spSummary.filter(s => s.poin >= 100 && s.poin < 200).length} color={C.blue} />
-            <StatCard icon="🟡" label="SP2 (200-299)" value={spSummary.filter(s => s.poin >= 200 && s.poin < 300).length} color={C.gold} />
-            <StatCard icon="🔴" label="SP3 / Kritis (300+)" value={spSummary.filter(s => s.poin >= 300).length} color={C.red} />
+            <StatCard icon="📋" label="SP1 (90)" value={spSummary.filter(s => s.poin >= 90 && s.poin < 179).length} color={C.red} />
+            <StatCard icon="🟡" label="SP2 (180)" value={spSummary.filter(s => s.poin >= 180 && s.poin < 269).length} color={C.red} />
+            <StatCard icon="🔴" label="SP3 / Kritis (270)" value={spSummary.filter(s => s.poin >= 270).length} color={C.red} />
           </div>
           <Card>
             <div style={{ fontWeight: 700, color: C.emeraldDark, marginBottom: 14 }}>Rekap SP Semua Siswa (dengan Poin &gt; 50)</div>
@@ -1687,15 +2106,32 @@ function ModulLaporan({ user, siswa, pelanggaran, apresiasi, hafalan, vocab, cat
               const poin = getAkumulasiPoin(s.nisn, pelanggaran, apresiasi);
               const sp = getSP(poin);
               return <>
-                <td style={{ padding: "10px 12px", fontWeight: 600 }}>{s.nama}</td>
-                <td style={{ padding: "10px 12px" }}><Badge>{s.kelas}</Badge></td>
-                <td style={{ padding: "10px 12px" }}><Badge color={C.emeraldDark} bg={C.emeraldLight}>{hafalan.filter(h => h.nisn === s.nisn && h.status === "Lulus").length} setoran</Badge></td>
-                <td style={{ padding: "10px 12px" }}><Badge color={C.gold} bg={C.goldLight}>{totalVocabSiswa(s.nisn, vocab)} kata</Badge></td>
-                <td style={{ padding: "10px 12px", fontWeight: 700, color: poin > 0 ? C.red : C.gray600 }}>{poin} poin</td>
-                <td style={{ padding: "10px 12px" }}>{absensi.filter(a => a.nisn === s.nisn && a.status === "Hadir").length}/{absensi.filter(a => a.nisn === s.nisn).length}</td>
-                <td style={{ padding: "10px 12px" }}><span style={{ background: sp.bg, color: sp.color, padding: "2px 8px", borderRadius: 99, fontSize: 11, fontWeight: 600 }}>{sp.level}</span></td>
-              </>;
-            }}
+                <td style={{ padding: "10px 12px" }}>
+  {/* 1. Menampilkan Status Pelanggaran (misal: Pelanggaran Berat SP1) */}
+  <span style={{ 
+    color: sp.color, 
+    backgroundColor: sp.bg, 
+    padding: "4px 10px", 
+    borderRadius: "6px", 
+    fontWeight: "bold",
+    fontSize: "13px",
+    display: "inline-block"
+  }}>
+    {sp.level}
+  </span>
+  
+  {/* 2. Menampilkan Siapa Penanggung Jawabnya */}
+  <div style={{ fontSize: "12px", color: "#374151", marginTop: "6px" }}>
+    <strong>PJ:</strong> {sp.pj}
+  </div>
+  
+  {/* 3. Menampilkan Alur Tindak Lanjut Sekolah */}
+  <div style={{ fontSize: "11px", color: "#6b7280", marginTop: "2px", maxWidth: "250px", lineHeight: "1.3" }}>
+    <strong>Tindak Lanjut:</strong> {sp.tindakLanjut}
+  </div>
+</td>
+ </>;
+    }}
           />
         </Card>
       )}
