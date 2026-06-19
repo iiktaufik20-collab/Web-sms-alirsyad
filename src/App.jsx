@@ -653,18 +653,19 @@ function LoginPage({ onLogin, users, siswa, pelanggaran, apresiasi, hafalan }) {
    const handleLogin = async (e) => {
     e.preventDefault();
     setError(""); // Reset pesan error dulu
-
+console.log("Email:", username)
+console.log("Password:", password)
     try {
       // 1. LOGIN KE SUPABASE AUTH
       const { data, error } = await supabase.auth.signInWithPassword({
         email: username,    // Mengambil nilai dari input state username (baris 411)
         password: password, // Mengambil nilai dari input state password (baris 412)
       });
-
+console.log("error:",error) 
       // 2. JIKA LOGIN GAGAL
       if (error) {
-        setError("Username atau password salah");
-        console.error("Gagal login:", error.message);
+        console.log(error);
+        setError(error.message)
         return;
       }
 
