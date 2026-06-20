@@ -109,3 +109,14 @@ code {
   padding: 4px 8px;
   background: var(--code-bg);
 }
+input,
+textarea,
+select {
+  color: #000 !important;
+  background-color: #fff !important;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #666 !important;
+}
