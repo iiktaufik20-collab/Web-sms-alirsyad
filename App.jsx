@@ -1485,19 +1485,26 @@ function ModulGuru({ user, guru, setGuru, users, setUsers }) {
         <Table
           cols={["NIP", "Nama", "Jabatan", "Kelas", "Username", "Status", "Aksi"]}
           rows={guru}
-          renderRow={(g) => <>
-            <td style={{ padding: "10px 12px", fontSize: 12 }}>{g.nip}</td>
-            <td style={{ padding: "10px 12px", fontWeight: 600 }}>{g.nama}</td>
-            <td style={{ padding: "10px 12px", fontSize: 12 }}>{g.jabatan}</td>
-            <td style={{ padding: "10px 12px" }}>{g.kelas ? <Badge>{g.kelas}</Badge> : "-"}</td>
-            <td style={{ padding: "10px 12px", fontSize: 12 }}>{g.username}</td>
-            <td style={{ padding: "10px 12px" }}><Badge color={g.aktif ? C.emeraldDark : C.red} bg={g.aktif ? C.emeraldLight : C.redLight}>{g.aktif ? "Aktif" : "Non-Aktif"}</Badge></td>
-            <td style={{ padding: "10px 12px" }}>
-              <Btn small variant="ghost" onClick={() => openEdit(g)} style={{ marginRight: 6 }}>✏️ Edit</Btn>
-            </td>
-          </>}
-        />
-      </Card>
+          renderRow={(g) => (
+  <tr>
+    <td>{g.nip}</td>
+    <td>{g.nama}</td>
+    <td>{g.jabatan}</td>
+    <td>{g.kelas || "-"}</td>
+    <td>{g.username}</td>
+    <td>
+      <Badge>{g.aktif ? "Aktif" : "Non-Aktif"}</Badge>
+    </td>
+    <td>
+      <Btn small variant="ghost" onClick={() => openEdit(g)}>
+        ✏️ Edit
+      </Btn>
+    </td>
+  </tr>
+)}
+/>
+
+</Card>
 
       <Modal open={modal} onClose={() => setModal(false)} title={edit ? "Edit Data Guru" : "Tambah Guru Baru"}>
         <Input label="NIP" value={form.nip} onChange={e => setForm(f => ({ ...f, nip: e.target.value }))} />
@@ -1570,7 +1577,9 @@ function ModulLaporan({ user, siswa, pelanggaran, apresiasi, hafalan, vocab, cat
             <StatCard icon="🔴" label="SP3 / Kritis (300+)" value={spSummary.filter(s => s.poin >= 300).length} color={C.red} />
           </div>
           <Card>
-            <div style={{ fontWeight: 700, color: C.emeraldDark, marginBottom: 14 }}>Rekap SP Semua Siswa (dengan Poin > 50)</div>
+            <div style={{ fontWeight: 700, color: C.emeraldDark, marginBottom: 14 }}>
+  Rekap SP Semua Siswa (dengan Poin &gt; 50)
+</div>
             <Table
               cols={["Nama", "Kelas", "Total Poin", "Status SP", "Tindak Lanjut"]}
               rows={spSummary.filter(s => s.poin > 0).sort((a, b) => b.poin - a.poin)}
@@ -1703,3 +1712,13 @@ function ModulLaporan({ user, siswa, pelanggaran, apresiasi, hafalan, vocab, cat
     </div>
   );
 }
+
+
+
+
+
+
+
+
+
+

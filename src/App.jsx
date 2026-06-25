@@ -1,6 +1,7 @@
 import { supabase } from './lib/supabaseClient'
 import { useState, useEffect, useRef } from "react";
 import logoAlirsyad from "./assets/logo-alirsyad.png";
+import * as XLSX from "xlsx";
 
 // ===================== MOCK DATA =====================
 const INITIAL_USERS = [
@@ -237,10 +238,17 @@ const formatDate = (d) => {
 };
 
 const getAkumulasiPoin = (nisn, pelanggaran, apresiasi) => {
-  const totalPelanggaran = pelanggaran.filter(p => p.nisn === nisn).reduce((s, p) => s + p.poin, 0);
-  const totalApresiasi = apresiasi.filter(a => a.nisn === nisn).reduce((s, a) => s + a.pengurangan, 0);
+  const totalPelanggaran = pelanggaran
+    .filter(p => String(p.nisn) === String(nisn))
+    .reduce((s, p) => s + Number(p.poin || 0), 0);
+
+  const totalApresiasi = apresiasi
+    .filter(a => String(a.nisn) === String(nisn))
+    .reduce((s, a) => s + Number(a.pengurangan || 0), 0);
+
   return Math.max(0, totalPelanggaran - totalApresiasi);
 };
+
 
 const getSP = (poin) => {
   if (poin > 270) {
@@ -511,6 +519,7 @@ export default function App() {
   const [user, setUser] = useState(null);
   const [activeMenu, setActiveMenu] = useState("dashboard");
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const isMobile = window.innerWidth <= 768;
 
   // State data
   const [siswa, setSiswa] = useState(INITIAL_SISWA);
@@ -533,15 +542,127 @@ console.log('ERROR SISWA =', error)
 
   setSiswa(data)
 }
-  const [pelanggaran, setPelanggaran] = useState(INITIAL_PELANGGARAN);
-  const [apresiasi, setApresiasi] = useState(INITIAL_APRESIASI);
-  const [hafalan, setHafalan] = useState(INITIAL_HAFALAN);
-  const [vocab, setVocab] = useState(INITIAL_VOCAB);
-  const [absensi, setAbsensi] = useState(INITIAL_ABSENSI);
-  const [catatan, setCatatan] = useState(INITIAL_CATATAN);
-  const [guru, setGuru] = useState(INITIAL_GURU);
-  const [users, setUsers] = useState(INITIAL_USERS);
+ const [pelanggaran, setPelanggaran] = useState([]);
+const [apresiasi, setApresiasi] = useState([]);
+const [hafalan, setHafalan] = useState([]);
+const [vocab, setVocab] = useState([]);
+const [absensi, setAbsensi] = useState([]);
+const [catatan, setCatatan] = useState([]);
+const [guru, setGuru] = useState([]);
+const [users, setUsers] = useState(INITIAL_USERS);
+useEffect(() => {
+  loadGuru();
+  loadPelanggaran();
+  loadApresiasi();
+  loadHafalan();
+  loadAbsensi();
+  loadCatatan();
+}, []);
+async function loadPelanggaran() {
+  const { data, error } = await supabase
+    .from('pelanggaran')
+    .select('*');
+console.log("DATA PELANGGARAN SUPABASE:", data);
+  console.log("DATA PELANGGARAN:", data);
+  console.log("PELANGGARAN PERTAMA:", JSON.stringify(data?.[0], null, 2));
 
+  if (error) {
+    console.error(error);
+    return;
+  }
+
+  setPelanggaran(data || []);
+}
+async function loadGuru() {
+  const { data, error } = await supabase
+    .from('guru')
+    .select('*');
+
+  console.log('DATA GURU:', data);
+console.log('STATUS GURU PERTAMA:', data?.[0]?.status);
+
+  if (error) {
+    console.error(error);
+    return;
+  }
+
+  setGuru(data || []);
+}
+async function loadApresiasi() {
+  const { data, error } = await supabase
+    .from("apresiasi")
+    .select("*")
+    .order("id", { ascending: false });
+
+  console.log("DATA APRESIASI:", data);
+  console.log("ERROR APRESIASI:", error);
+
+  if (!error) {
+    setApresiasi(data || []);
+  }
+}
+async function loadHafalan() {
+  const { data, error } = await supabase
+    .from("qiroati")
+    .select("*")
+    .order("id", { ascending: false });
+
+  console.log("DATA QIROATI:", data);
+  console.log("ERROR QIROATI:", error);
+
+  if (!error) {
+    setHafalan(data || []);
+  }
+}
+useEffect(() => {
+  loadVocab();
+}, []);
+
+const loadVocab = async () => {
+  const { data, error } = await supabase
+    .from("vocab")
+    .select("*")
+    .order("tanggal", { ascending: false });
+
+  if (error) {
+    console.log(error);
+    return;
+  }
+
+  setVocab(data || []);
+};
+async function loadAbsensi() {
+  const { data, error } = await supabase
+    .from("absensi")
+    .select("*")
+    .order("id", { ascending: false });
+
+  console.log("DATA ABSENSI:", data);
+  console.log("ERROR ABSENSI:", error);
+
+  if (!error) {
+    setAbsensi(data || []);
+  }
+}
+useEffect(() => {
+  loadCatatan();
+}, []);
+
+const loadCatatan = async () => {
+  const { data, error } = await supabase
+    .from("catatan")
+    .select("*")
+    .order("tanggal", {
+      ascending: false
+    });
+
+  if (error) {
+    console.error(error);
+    return;
+  }
+
+  setCatatan(data || []);
+};
   const handleLogin = (u) => { setUser(u); setActiveMenu("dashboard"); };
   const handleLogout = () => { setUser(null); setActiveMenu("dashboard"); };
 
@@ -552,7 +673,9 @@ console.log('ERROR SISWA =', error)
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: C.gray50, fontFamily: "'Segoe UI', Tahoma, sans-serif" }}>
       {/* Sidebar */}
-      <div style={{ width: sidebarOpen ? 230 : 60, background: `linear-gradient(180deg, ${C.emeraldDark} 0%, #064e3b 100%)`, transition: "width .25s", flexShrink: 0, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+      <div style={{ width: isMobile
+  ? (sidebarOpen ? 220 : 0)
+  : (sidebarOpen ? 230 : 60), background: `linear-gradient(180deg, ${C.emeraldDark} 0%, #064e3b 100%)`, transition: "width .25s", flexShrink: 0, display: "flex", flexDirection: "column", overflow: "hidden" }}>
         {/* Logo */}
         <div style={{ padding: "18px 16px", borderBottom: "1px solid rgba(255,255,255,.12)" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -598,7 +721,7 @@ console.log('ERROR SISWA =', error)
       {/* Main */}
       <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
         {/* Topbar */}
-        <div style={{ background: C.white, padding: "12px 24px", borderBottom: `1px solid ${C.gray200}`, display: "flex", alignItems: "center", justifyContent: "space-between", boxShadow: "0 1px 4px rgba(0,0,0,.05)" }}>
+        <div style={{ background: C.white, padding: isMobile ? "10px 12px" : "12px 24px", borderBottom: `1px solid ${C.gray200}`, display: "flex", alignItems: "center", justifyContent: "space-between", boxShadow: "0 1px 4px rgba(0,0,0,.05)" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <button onClick={() => setSidebarOpen(v => !v)} style={{ border: "none", background: "none", fontSize: 20, cursor: "pointer", color: C.gray700 }}>☰</button>
             <div>
@@ -615,7 +738,13 @@ console.log('ERROR SISWA =', error)
         </div>
 
         {/* Content */}
-        <div style={{ flex: 1, overflowY: "auto", padding: 24 }}>
+        <div
+  style={{
+    flex: 1,
+    overflowY: "auto",
+    padding: isMobile ? 10 : 24
+  }}
+>
           <PageContent
             activeMenu={activeMenu}
             user={user}
@@ -639,6 +768,7 @@ console.log('ERROR SISWA =', error)
 function LoginPage({ onLogin, users, siswa, pelanggaran, apresiasi, hafalan }) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [remember, setRemember] = useState(false);
   const [savedCreds, setSavedCreds] = useState(null);
@@ -657,17 +787,31 @@ console.log("Email:", username)
 console.log("Password:", password)
     try {
       // 1. LOGIN KE SUPABASE AUTH
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: username,    // Mengambil nilai dari input state username (baris 411)
-        password: password, // Mengambil nilai dari input state password (baris 412)
-      });
+      console.log("SUPABASE URL:", import.meta.env.VITE_SUPABASE_URL);
+console.log("EMAIL:", username);
+console.log("PASSWORD:", password);
+      const emailLogin = username.trim().toLowerCase();
+const passwordLogin = password.trim();
+
+console.log("EMAIL LOGIN:", emailLogin);
+console.log("PASSWORD LOGIN:", passwordLogin);
+
+const { data, error } = await supabase.auth.signInWithPassword({
+  email: emailLogin,
+  password: passwordLogin,
+});
+
+console.log("HASIL LOGIN:", data);
+console.log("ERROR LOGIN:", error);
+      console.log("EMAIL LOGIN:", username);
+console.log("PASSWORD LOGIN:", password);
 console.log("error:",error) 
       // 2. JIKA LOGIN GAGAL
       if (error) {
-        console.log(error);
-        setError(error.message)
-        return;
-      }
+  console.error("LOGIN ERROR:", error);
+  alert(JSON.stringify(error, null, 2));
+  return;
+}
 
       // 3. JIKA BERHASIL LOGIN, PROSES ATUR ROLE & IDENTITAS USER
       if (data?.user) {
@@ -701,28 +845,49 @@ console.log("error:",error)
           detectedRole = 'walas'; 
           const kelas = detectedUsername.replace('walas', '').toUpperCase();
           displayName = `Wali Kelas ${kelas}`;
-        } else if (detectedUsername.startsWith('ortu')) {
-          // Mendeteksi format ortu_081234567890
-          detectedRole = 'ortu'; 
-          displayName = 'Orang Tua Siswa';
-          // Ambil nomor WA-nya (Contoh: ortu_08123456789 -> 08123456789)
-          nomorWAOrangTua = detectedUsername.replace('ortu_', ''); 
         } else if (detectedUsername.startsWith('guru')) {
           detectedRole = 'guru_mapel';
           displayName = 'Guru Mapel';
         }
+// CEK DULU APAKAH USER ADA DI TABEL users_ortu
+// ===================== CEK USER ORTU =====================
+const { data: semuaOrtu, error: ortuError } = await supabase
+  .from("users_ortu")
+  .select("*");
 
-        // BUNGKUS MENJADI DATA USER JADI-PAKAI UNTUK DASHBOARD
+const dataOrtu = semuaOrtu?.find(
+  o => o.username?.trim().toLowerCase() === detectedUsername
+);
+
+console.log("USERNAME LOGIN:", detectedUsername);
+console.log("DATA ORTU:", dataOrtu);
+console.log("SEMUA ORTU:", semuaOrtu);
+
+if (dataOrtu) {
+  detectedRole = "ortu";
+  displayName = dataOrtu.nama || "Orang Tua Siswa";
+
+  console.log("LOGIN SEBAGAI ORTU");
+} else {
+  console.log("DATA ORTU TIDAK DITEMUKAN");
+}        // BUNGKUS MENJADI DATA USER JADI-PAKAI UNTUK DASHBOARD
         const userKomplit = {
-          id: data.user.id,
-          username: detectedUsername,
-          email: data.user.email,
-          role: detectedRole, 
-          name: displayName,
-          whatsapp: nomorWAOrangTua // Mengirim data WA khusus untuk akun orang tua
-        };
+  id: data.user.id,
+  username: detectedUsername,
+  email: data.user.email,
+  role: detectedRole,
+  name: displayName,
 
-        // Kirim data komplit ini ke state/fungsi login utama aplikasi kamu
+  nisn: dataOrtu?.nisn || "",
+  namaSiswa: dataOrtu?.nama || ""
+};
+console.log("USER KOMPLIT:", userKomplit);
+console.log("=== DATA ORTU ===");
+console.log(dataOrtu);
+
+console.log("=== USER KOMPLIT ===");
+console.log(userKomplit);
+// Kirim data komplit ini ke state/fungsi login utama aplikasi kamu
         onLogin(userKomplit); 
       }
 
@@ -733,13 +898,16 @@ console.log("error:",error)
   };
 
   // Marquee achievements
-  const achievements = [
-    "🏆 Inas Kamila meraih Juara Kota MTQ",
-    "📖 Ahmad Fauzi selesai hafalan Al-Baqarah 1-20",
-    "🌟 Bunga Rahmawati setoran hafalan Al-Fatihah dengan lancar",
-    "📚 Farhan Maulana selesai Tajwid Ghorib Bab 1",
-  ];
-
+const achievements =
+  apresiasi && apresiasi.length > 0
+    ? apresiasi
+        .slice(-10)
+        .reverse()
+        .map(
+          (a) =>
+            `🏆 ${a.nama} - ${a.jenis || a.prestasi || a.keterangan}`
+        )
+    : ["Belum ada data apresiasi"];
   return (
     <div style={{ minHeight: "100vh", background: `linear-gradient(135deg, ${C.emeraldDark} 0%, #064e3b 50%, #065f46 100%)`, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 20 }}>
       {/* Achievement ticker */}
@@ -777,7 +945,34 @@ console.log("error:",error)
         </div>
 
         <Input label="Email" value={username} onChange={e => setUsername(e.target.value)} placeholder="Masukkan email..." />
-        <Input label="Password" type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Masukkan password..." onKeyDown={e => e.key === "Enter" && handleLogin()} />
+        <div style={{ marginBottom: 16 }}>
+<div style={{ position: "relative", marginBottom: 16 }}>
+  <Input
+    label="Password"
+    type={showPassword ? "text" : "password"}
+    value={password}
+    onChange={e => setPassword(e.target.value)}
+    placeholder="Masukkan password..."
+    onKeyDown={e => e.key === "Enter" && handleLogin(e)}
+  />
+
+  <button
+    type="button"
+    onClick={() => setShowPassword(!showPassword)}
+    style={{
+      position: "absolute",
+      right: 12,
+      top: 38,
+      border: "none",
+      background: "transparent",
+      cursor: "pointer",
+      fontSize: 16,
+      zIndex: 10
+    }}
+  >
+    {showPassword ? "🙈" : "👁️"}
+  </button>
+</div></div>
 
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
           <input type="checkbox" id="remember" checked={remember} onChange={e => setRemember(e.target.checked)} />
@@ -824,6 +1019,7 @@ function PageContent(props) {
 }
 
 // ===================== DASHBOARD UTAMA =====================
+
 function DashboardUtama({ user, siswa, pelanggaran, apresiasi, hafalan, vocab, catatan, greeting }) {
   const totalSiswa = siswa.length;
   const totalPelanggaran = pelanggaran.length;
@@ -841,12 +1037,36 @@ function DashboardUtama({ user, siswa, pelanggaran, apresiasi, hafalan, vocab, c
   // Vocab per kelas
   const vocabKelas = KELAS_LIST.slice(0, 6).map(k => ({ label: k, value: vocab.filter(v => siswa.find(s => s.nisn === v.nisn && s.kelas === k)).reduce((s, v) => s + v.jumlah, 0) }));
 
-  // SP counts
-  const sp1 = siswa.filter(s => { const p = getAkumulasiPoin(s.nisn, pelanggaran, apresiasi); return p >= 90 && p < 179; }).length;
-  const sp2 = siswa.filter(s => { const p = getAkumulasiPoin(s.nisn, pelanggaran, apresiasi); return p >= 180 && p < 269; }).length;
-  const sp3 = siswa.filter(s => { const p = getAkumulasiPoin(s.nisn, pelanggaran, apresiasi); return p >= 270; }).length;
+const dataSP = siswa.map(s => ({
+  ...s,
+  poin: getAkumulasiPoin(
+    s.nisn,
+    pelanggaran,
+    apresiasi
+  )
+}));
 
-  const roleLabel = { admin: "Admin", kepsek: "Kepala Sekolah", bk: "Guru BK", kesiswaan: "Kesiswaan", walas: "Wali Kelas", qiroati: "Guru Qiroati", bilingual: "PJ Bilingual" };
+console.log(dataSP);
+console.log("DATA SP", dataSP.slice(0, 5));
+console.log("PELANGGARAN", pelanggaran[0]);
+console.log("APRESIASI", apresiasi[0]);
+const sp1 = dataSP.filter(
+  s => getSP(s.poin).level === "Pelanggaran Berat (SP1)"
+).length;
+
+const sp2 = dataSP.filter(
+  s => getSP(s.poin).level === "Pelanggaran Berat (SP2)"
+).length;
+
+const sp3 = dataSP.filter(
+  s => getSP(s.poin).level === "Pelanggaran Berat (SP3)"
+).length;
+
+const kritis = dataSP.filter(
+  s => getSP(s.poin).level === "Pelanggaran Sangat Berat"
+).length;
+
+const roleLabel = { admin: "Admin", kepsek: "Kepala Sekolah", bk: "Guru BK", kesiswaan: "Kesiswaan", walas: "Wali Kelas", qiroati: "Guru Qiroati", bilingual: "PJ Bilingual" };
 
   return (
     <div>
@@ -863,10 +1083,10 @@ function DashboardUtama({ user, siswa, pelanggaran, apresiasi, hafalan, vocab, c
         <StatCard icon="⚠️" label="Total Pelanggaran" value={totalPelanggaran} color={C.red} sub="Semua kelas" />
         <StatCard icon="🏆" label="Total Apresiasi" value={totalApresiasi} color={C.gold} sub="Semua siswa" />
         <StatCard icon="📖" label="Setoran Hafalan" value={totalHafalan} color={C.blue} sub="Total setoran" />
-        <StatCard icon="📋" label="SP1" value={sp1} color={C.red} sub="90-179 poin" />
-        <StatCard icon="🔴" label="SP2" value={sp2} color={C.red} sub="180-269 poin" />
-        <StatCard icon="🚨" label="SP3 / Kritis" value={sp3} color={C.red} sub="270+ poin" />
-      </div>
+<StatCard icon="📋" label="SP1" value={sp1} color={C.red} sub="90-179 poin" />
+<StatCard icon="🔴" label="SP2" value={sp2} color={C.red} sub="180-269 poin" />
+<StatCard icon="🚨" label="SP3" value={sp3} color={C.red} sub="270 poin" />
+<StatCard icon="⛔" label="Sangat Berat" value={kritis} color={C.red} sub=">270 poin" />      </div>
 
       {/* Charts Row */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginBottom: 24 }}>
@@ -941,7 +1161,14 @@ function DashboardUtama({ user, siswa, pelanggaran, apresiasi, hafalan, vocab, c
 
 // ===================== DASHBOARD ORANG TUA =====================
 function DashboardOrtu({ user, siswa, pelanggaran, apresiasi, hafalan, vocab, absensi }) {
-  const anak = siswa.find(s => s.nisn === user.siswaNisn);
+  console.log("USER DASHBOARD ORTU:", user);
+console.log("USER NISN:", user?.nisn);
+
+const anak = siswa.find(
+  s => String(s.nisn).trim() === String(user.nisn).trim()
+);
+
+console.log("ANAK DITEMUKAN:", anak);
   if (!anak) return <div style={{ padding: 40, textAlign: "center" }}>Data anak tidak ditemukan</div>;
 
   const poin = getAkumulasiPoin(anak.nisn, pelanggaran, apresiasi);
@@ -953,13 +1180,96 @@ function DashboardOrtu({ user, siswa, pelanggaran, apresiasi, hafalan, vocab, ab
   const hadir = absensi.filter(a => a.nisn === anak.nisn && a.status === "Hadir").length;
   const totalAbsen = absensi.filter(a => a.nisn === anak.nisn).length;
 
+  const sakit = absensi.filter(
+  a => a.nisn === anak.nisn && a.status === "Sakit"
+).length;
+
+const izin = absensi.filter(
+  a => a.nisn === anak.nisn && a.status === "Izin"
+).length;
+
+const alfa = absensi.filter(
+  a => a.nisn === anak.nisn &&
+  (a.status === "Alfa" || a.status === "Alpha")
+).length;
+
+const totalPelanggaranPoin = pelanggaranAnak.reduce(
+  (s, p) => s + (Number(p.poin) || 0),
+  0
+);
+
+const totalApresiasiPoin = apresiasiAnak.reduce(
+  (s, a) => s + (Number(a.poin) || 0),
+  0
+);
+const absensiAnak = absensi
+  .filter(a => a.nisn === anak.nisn)
+  .sort((a, b) => new Date(b.tanggal) - new Date(a.tanggal))
+  .slice(0, 5);
+  <Card style={{ marginBottom: 20 }}>
+  <div style={{
+    fontWeight: 700,
+    color: C.emeraldDark,
+    marginBottom: 12
+  }}>
+    📅 Riwayat Absensi Terakhir
+  </div>
+
+  {absensiAnak.length === 0 ? (
+    <div>Belum ada data absensi</div>
+  ) : (
+    absensiAnak.map((a, i) => (
+      <div
+        key={i}
+        style={{
+          padding: "8px 0",
+          borderBottom: `1px solid ${C.gray100}`
+        }}
+      >
+        <div>
+          {formatDate(a.tanggal)}
+        </div>
+
+        <div
+          style={{
+            fontSize: 12,
+            color:
+              a.status === "Hadir"
+                ? C.emerald
+                : C.red
+          }}
+        >
+          {a.status}
+        </div>
+      </div>
+    ))
+  )}
+</Card>
   return (
     <div>
       <Card style={{ background: `linear-gradient(135deg, ${C.emerald}, ${C.emeraldDark})`, color: C.white, marginBottom: 24 }}>
         <div style={{ fontSize: 14, opacity: .8 }}>Assalamu'alaikum Warahmatullahi Wabarakatuh</div>
-        <div style={{ fontWeight: 800, fontSize: 20, marginTop: 4 }}>Selamat Datang, {user.name.replace("Orang Tua - ", "")} 👋</div>
+        <div style={{ fontWeight: 800, fontSize: 20, marginTop: 4 }}>
+  Selamat Datang, Orang Tua dari {anak.nama} 👋
+</div>
         <div style={{ fontSize: 13, opacity: .75, marginTop: 4 }}>Pantau perkembangan putra/putri Anda</div>
       </Card>
+<Card style={{ marginBottom: 20 }}>
+  <div style={{ fontWeight: 700, marginBottom: 12 }}>
+    📋 Ringkasan Kehadiran
+  </div>
+
+  <div
+  style={{
+    display: "grid",
+    gridTemplateColumns:
+      "repeat(auto-fit,minmax(300px,1fr))",
+    gap: 20,
+    marginBottom: 20
+  }}
+>
+  </div>
+</Card>
 
       {/* Profil anak */}
       <Card style={{ marginBottom: 20 }}>
@@ -984,7 +1294,29 @@ function DashboardOrtu({ user, siswa, pelanggaran, apresiasi, hafalan, vocab, ab
         <StatCard icon="📖" label="Setoran Hafalan" value={hafalanAnak.length} color={C.blue} sub="total setoran" />
         <StatCard icon="🔤" label="Total Vocab" value={totalVocabSiswa(anak.nisn, vocab)} color={C.emeraldMid} sub="kata dikuasai" />
       </div>
+<Card style={{ marginBottom: 20 }}>
+  <div style={{ fontWeight: 700, marginBottom: 12 }}>
+    📊 Rekap Poin Karakter
+  </div>
 
+  <div style={{
+    display: "flex",
+    gap: 20,
+    flexWrap: "wrap"
+  }}>
+    <div style={{ color: C.red }}>
+      ⚠️ Pelanggaran : +{totalPelanggaranPoin}
+    </div>
+
+    <div style={{ color: C.gold }}>
+      🏆 Apresiasi : -{totalApresiasiPoin}
+    </div>
+
+    <div style={{ fontWeight: 700 }}>
+      Total : {poin}
+    </div>
+  </div>
+</Card>
       {/* Riwayat setoran */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginBottom: 20 }}>
         <Card>
@@ -998,6 +1330,40 @@ function DashboardOrtu({ user, siswa, pelanggaran, apresiasi, hafalan, vocab, ab
             ))
           }
         </Card>
+        <Card>
+  <div style={{ fontWeight: 700, color: C.gold, marginBottom: 12 }}>
+    🏆 Riwayat Apresiasi
+  </div>
+
+  {apresiasiAnak.length === 0 ? (
+    <div style={{ color: C.gray600, fontSize: 13 }}>
+      Belum ada apresiasi
+    </div>
+  ) : (
+    apresiasiAnak.slice(-5).reverse().map((a, i) => (
+      <div
+        key={i}
+        style={{
+          padding: "8px 0",
+          borderBottom: `1px solid ${C.gray100}`
+        }}
+      >
+        <div style={{ fontWeight: 600, fontSize: 13 }}>
+          {a.jenis}
+        </div>
+
+        <div
+          style={{
+            fontSize: 11,
+            color: C.gold
+          }}
+        >
+          +{a.poin} poin • {formatDate(a.tanggal)}
+        </div>
+      </div>
+    ))
+  )}
+</Card>
         <Card>
           <div style={{ fontWeight: 700, color: C.emeraldDark, marginBottom: 12 }}>⚠️ Riwayat Pelanggaran</div>
           {pelanggaranAnak.length === 0 ? <div style={{ color: C.emerald, fontSize: 13 }}>Alhamdulillah, tidak ada pelanggaran 🎉</div> :
@@ -1017,7 +1383,21 @@ function DashboardOrtu({ user, siswa, pelanggaran, apresiasi, hafalan, vocab, ab
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
           <div>
             <div style={{ fontSize: 13, color: C.gray600, marginBottom: 8 }}>Setoran per bulan (hafalan)</div>
-            <SimpleBar data={["Jan","Feb","Mar","Apr","Mei","Jun"].map(m => ({ label: m, value: hafalanAnak.filter(h => h.tanggal?.includes(`-0${["Jan","Feb","Mar","Apr","Mei","Jun"].indexOf(m)+1}-`) || h.tanggal?.includes(`-${["Jan","Feb","Mar","Apr","Mei","Jun"].indexOf(m)+1}-`)).length }))} color={C.emerald} height={100} />
+            <SimpleBar
+  data={["Jan","Feb","Mar","Apr","Mei","Jun"].map((m, idx) => ({
+    label: m,
+    value: vocabAnak
+      .filter(v =>
+        v.tanggal?.includes(
+          `-${String(idx + 1).padStart(2, "0")}-`
+        )
+      )
+      .reduce((s, v) => s + (Number(v.jumlah) || 0), 0)
+  }))}
+
+  color={C.gold}
+  height={100}
+/>
           </div>
           <div>
             <div style={{ fontSize: 13, color: C.gray600, marginBottom: 8 }}>Vocab per bulan</div>
@@ -1048,14 +1428,100 @@ function ModulSiswa({ user, siswa, setSiswa }) {
 
   const openAdd = () => { setEdit(null); setForm({ nisn:"", nipd:"", nama:"", jk:"L", tempatLahir:"", tglLahir:"", kelas:"7A", foto:"", namaAyah:"", namaIbu:"", noWa:"", alamat:"", aktif:true }); setModal(true); };
   const openEdit = (s) => { setEdit(s.nisn); setForm({ ...s }); setModal(true); };
-  const handleSave = () => {
-    if (!form.nama || !form.nisn) return;
-    if (edit) setSiswa(prev => prev.map(s => s.nisn === edit ? form : s));
-    else setSiswa(prev => [...prev, form]);
-    setModal(false);
-  };
-  const handleDelete = (nisn) => { if (window.confirm("Hapus siswa ini?")) setSiswa(prev => prev.filter(s => s.nisn !== nisn)); };
+  const handleSave = async () => {
+  if (!form.nama || !form.nisn) return;
 
+  const ttl =
+    form.tempatLahir && form.tglLahir
+      ? `${form.tempatLahir}, ${form.tglLahir}`
+      : "";
+
+  if (edit) {
+    const { error } = await supabase
+      .from("siswa")
+      .update({
+        nisn: form.nisn,
+        nipd: form.nipd,
+        nama: form.nama,
+        jk: form.jk,
+        ttl: ttl,
+        kelas: form.kelas,
+        nama_orang_tua: `${form.namaAyah || ""} / ${form.namaIbu || ""}`,
+        aktif: form.aktif
+      })
+      .eq("nisn", edit);
+
+    if (error) {
+      console.error(error);
+      alert(error.message);
+      return;
+    }
+
+    setSiswa(prev =>
+      prev.map(s =>
+        s.nisn === edit
+          ? {
+              ...s,
+              nisn: form.nisn,
+              nipd: form.nipd,
+              nama: form.nama,
+              jk: form.jk,
+              ttl: ttl,
+              kelas: form.kelas,
+              nama_orang_tua: `${form.namaAyah || ""} / ${form.namaIbu || ""}`,
+              aktif: form.aktif
+            }
+          : s
+      )
+    );
+  } else {
+    const { data, error } = await supabase
+      .from("siswa")
+      .insert([
+        {
+          nisn: form.nisn,
+          nipd: form.nipd,
+          nama: form.nama,
+          jk: form.jk,
+          ttl: ttl,
+          kelas: form.kelas,
+          nama_orang_tua: `${form.namaAyah || ""} / ${form.namaIbu || ""}`,
+          aktif: form.aktif
+        }
+      ])
+      .select();
+console.log("DATA HASIL INSERT:", data);
+console.log("ERROR INSERT:", error);
+alert(JSON.stringify(error));
+    if (error) {
+      console.error(error);
+      alert(error.message);
+      return;
+    }
+
+    setSiswa(prev => [...prev, data[0]]);
+  }
+
+  setModal(false);
+};
+  const handleDelete = async (nisn) => {
+  const yakin = window.confirm("Hapus siswa ini?");
+
+  if (!yakin) return;
+
+  const { error } = await supabase
+    .from("siswa")
+    .delete()
+    .eq("nisn", nisn);
+
+  if (error) {
+    console.error(error);
+    alert(error.message);
+    return;
+  }
+
+  setSiswa(prev => prev.filter(s => s.nisn !== nisn));
+};
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
@@ -1139,6 +1605,7 @@ const [kategoriFilter, setKategoriFilter]= useState("");
     (search === "" || p.nama?.toLowerCase().includes(search.toLowerCase()) || p.kelas?.includes(search)) && 
     (kelasFilter === "" || p.kelas === kelasFilter)
 ); 
+const [showAllTopPoin, setShowAllTopPoin] = useState(false);
   const handleJenisChange = (e) => {
     const j = JENIS_PELANGGARAN.find(jp => jp.nama === e.target.value);
     if (j) setForm(f => ({ ...f, jenis: j.nama, kategori: j.kategori, poin: j.poin }));
@@ -1147,20 +1614,119 @@ const jenisFiltered = JENIS_PELANGGARAN.filter(
   j => kategoriFilter === "" || j.kategori === kategoriFilter
 );  
   const handleSiswaSelect = (s) => {
-    setForm(f => ({ ...f, nisn: s.nisn, kelas: s.kelas }));
-    setSearchSiswa(s.nama);
-  };
+  setForm(f => ({
+    ...f,
+    nisn: s.nisn,
+    kelas: s.kelas
+  }));
 
-  const handleSave = () => {
+  setSearchSiswa(s.nama);
+};
+const [editId, setEditId] = useState(null);
+
+const [formAbsensi, setFormAbsensi] = useState({
+  status: "Hadir",
+  keterangan: ""
+});
+
+  const handleSave = async () => {
     const s = siswa.find(s => s.nisn === form.nisn);
-    if (!s || !form.jenis) return;
-    const newP = { id: Date.now(), ...form, nama: s.nama };
-    setPelanggaran(prev => [...prev, newP]);
+    console.log("DATA SISWA:", s);
+    console.log("NAMA:", s?.nama);
+console.log("KELAS:", s?.kelas);
+console.log("NISN FORM:", form.nisn);
+console.log("JENIS FORM:", form.jenis);
+console.log("SISWA DITEMUKAN:", s);
+console.log("DATA SISWA DIPILIH:", s);
+
+const payload = {
+  nisn: form.nisn,
+  nama: s?.nama,
+  kelas: s?.kelas,
+  jenis: form.jenis,
+  kategori: form.kategori,
+  poin: form.poin,
+  tanggal: form.tanggal,
+  guru: form.guru
+};
+
+console.log("PAYLOAD:", payload);
+console.log("FORM:", form);
+console.log("SISWA DITEMUKAN:", s);
+
+let data, error;
+
+if (editId) {
+  ({ data, error } = await supabase
+    .from('pelanggaran')
+    .update(payload)
+    .eq('id', editId)
+    .select());
+} else {
+  ({ data, error } = await supabase
+    .from('pelanggaran')
+    .insert([payload])
+    .select());
+}
+
+console.log("DATA SIMPAN:", data);
+console.log("ERROR SIMPAN:", error);    
+if (data) {
+  setPelanggaran(prev => [...prev, ...data]);
+}
     setModal(false);
   };
+  const handleDelete = async (id) => {
+  const yakin = window.confirm(
+    "Yakin ingin menghapus data pelanggaran ini?"
+  );
 
+  if (!yakin) return;
+
+  const { error } = await supabase
+    .from("pelanggaran")
+    .delete()
+    .eq("id", id);
+
+  if (error) {
+    alert(error.message);
+    return;
+  }
+
+  setPelanggaran(prev =>
+    prev.filter(p => p.id !== id)
+  );
+
+  alert("Data berhasil dihapus");
+};
+const handleEdit = (p) => {
+  setEditId(p.id);
+
+  setForm({
+    nisn: p.nisn,
+    kelas: p.kelas || "",
+    jenis: p.jenis,
+    kategori: p.kategori,
+    poin: p.poin,
+    tanggal: p.tanggal,
+    guru: p.guru
+  });
+
+  setSearchSiswa(p.nama || "");
+  setModal(true);
+};
   // Top siswa poin tertinggi
-  const topPoin = siswa.map(s => ({ ...s, poin: getAkumulasiPoin(s.nisn, pelanggaran, apresiasi) })).sort((a, b) => b.poin - a.poin).slice(0, 5);
+  const topPoin = siswa
+  .map(s => ({
+    ...s,
+    poin: getAkumulasiPoin(
+      s.nisn,
+      pelanggaran,
+      apresiasi
+    )
+  }))
+  .filter(s => s.poin > 0)
+  .sort((a, b) => b.poin - a.poin);
 
   // Grafik per kelas
   const kelasData = KELAS_LIST.slice(0, 8).map(k => ({ label: k, value: pelanggaran.filter(p => p.kelas === k).reduce((s, p) => s + p.poin, 0) }));
@@ -1180,21 +1746,133 @@ const jenisFiltered = JENIS_PELANGGARAN.filter(
       {/* Top Poin */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: 20, marginBottom: 20 }}>
         <Card>
-          <div style={{ fontWeight: 700, color: C.emeraldDark, marginBottom: 12 }}>🚨 Top Poin Tertinggi</div>
-          {topPoin.map((s, i) => {
-            const sp = getSP(s.poin);
-            return (
-              <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-                <div style={{ width: 22, height: 22, borderRadius: 99, background: C.red + "22", color: C.red, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 11, flexShrink: 0 }}>{i + 1}</div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 12, fontWeight: 600 }}>{s.nama}</div>
-                  <div style={{ fontSize: 10, color: C.gray600 }}>{s.kelas}</div>
-                </div>
-                <span style={{ background: sp.bg, color: sp.color, padding: "2px 8px", borderRadius: 99, fontSize: 11, fontWeight: 700 }}>{s.poin}</span>
-              </div>
-            );
-          })}
-        </Card>
+  <div
+    style={{
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: 14
+    }}
+  >
+    <div
+      style={{
+        fontWeight: 800,
+        color: C.red,
+        fontSize: 16
+      }}
+    >
+      🚨 Top Poin Pelanggaran
+    </div>
+
+    <div
+      style={{
+        background: C.redLight,
+        color: C.red,
+        padding: "4px 10px",
+        borderRadius: 99,
+        fontSize: 11,
+        fontWeight: 700
+      }}
+    >
+      {topPoin.length} Siswa
+    </div>
+  </div>
+
+  {(showAllTopPoin ? topPoin : topPoin.slice(0, 5)).map((s, i) => {
+    const sp = getSP(s.poin);
+
+    return (
+      <div
+        key={s.nisn}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          padding: "8px 0",
+          borderBottom: `1px solid ${C.gray100}`
+        }}
+      >
+        <div
+          style={{
+            width: 28,
+            height: 28,
+            borderRadius: "50%",
+            background:
+              i === 0
+                ? "#fef2f2"
+                : i === 1
+                ? "#fff7ed"
+                : i === 2
+                ? "#fffbeb"
+                : C.gray50,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontWeight: 800,
+            fontSize: 12
+          }}
+        >
+          #{i + 1}
+        </div>
+
+        <div style={{ flex: 1 }}>
+          <div
+            style={{
+              fontWeight: 600,
+              fontSize: 13
+            }}
+          >
+            {s.nama}
+          </div>
+
+          <div
+            style={{
+              fontSize: 11,
+              color: C.gray600
+            }}
+          >
+            {s.kelas}
+          </div>
+        </div>
+
+        <div style={{ textAlign: "right" }}>
+          <div
+            style={{
+              fontWeight: 800,
+              color: C.red,
+              fontSize: 14
+            }}
+          >
+            {s.poin}
+          </div>
+
+          <div
+            style={{
+              fontSize: 10,
+              color: sp.color
+            }}
+          >
+            {sp.level}
+          </div>
+        </div>
+      </div>
+    );
+  })}
+
+  {topPoin.length > 5 && (
+    <div style={{ textAlign: "center", marginTop: 12 }}>
+      <Btn
+        small
+        variant="ghost"
+        onClick={() => setShowAllTopPoin(!showAllTopPoin)}
+      >
+        {showAllTopPoin
+          ? "⬆️ Sembunyikan"
+          : `📋 Lihat Selengkapnya (${topPoin.length - 5} lainnya)`}
+      </Btn>
+    </div>
+  )}
+</Card>
         <Card>
           <div style={{ fontWeight: 700, color: C.emeraldDark, marginBottom: 12 }}>📊 Poin Pelanggaran per Kelas</div>
           <SimpleBar data={kelasData} color={C.red} height={120} />
@@ -1214,24 +1892,104 @@ const jenisFiltered = JENIS_PELANGGARAN.filter(
 
       <Card>
         <Table
-          cols={["Tanggal", "Nama", "Kelas", "Jenis Pelanggaran", "Kategori", "Poin", "Guru", "Status"]}
+          cols={["Tanggal", "Nama", "Kelas", "Jenis Pelanggaran", "Kategori", "Poin", "Guru", "Status", "Aksi"]}
           rows={filtered}
           renderRow={(p) => {
-            const totalPoin = getAkumulasiPoin(p.nisn, pelanggaran, apresiasi);
-            const sp = getSP(totalPoin);
-            return <>
-              <td style={{ padding: "10px 12px", fontSize: 12 }}>{formatDate(p.tanggal)}</td>
-              <td style={{ padding: "10px 12px", fontWeight: 600 }}>{p.nama}</td>
-              <td style={{ padding: "10px 12px" }}><Badge>{p.kelas}</Badge></td>
-              <td style={{ padding: "10px 12px", fontSize: 12 }}>{p.jenis}</td>
-              <td style={{ padding: "10px 12px" }}>
-                <span style={{ background: p.kategori === "Ringan" ? C.emeraldLight : p.kategori === "Sedang" ? C.goldLight : C.redLight, color: p.kategori === "Ringan" ? C.emeraldDark : p.kategori === "Sedang" ? C.gold : C.red, padding: "2px 8px", borderRadius: 99, fontSize: 11, fontWeight: 600 }}>{p.kategori}</span>
-              </td>
-              <td style={{ padding: "10px 12px", fontWeight: 700, color: C.red }}>+{p.poin}</td>
-              <td style={{ padding: "10px 12px", fontSize: 12 }}>{p.guru}</td>
-              <td style={{ padding: "10px 12px" }}><span style={{ background: sp.bg, color: sp.color, padding: "2px 8px", borderRadius: 99, fontSize: 11, fontWeight: 600 }}>{sp.level}</span></td>
-            </>;
+  const totalPoin = getAkumulasiPoin(p.nisn, pelanggaran, apresiasi);
+  const sp = getSP(totalPoin);
+
+  const dataSiswa = siswa.find(
+  s => s.nisn === p.nisn
+);
+
+  return (
+    <>
+      <td style={{ padding: "10px 12px", fontSize: 12 }}>
+        {formatDate(p.tanggal)}
+      </td>
+
+      <td style={{ padding: "10px 12px", fontWeight: 600 }}>
+        {p.nama || dataSiswa?.nama || "-"}
+      </td>
+
+      <td style={{ padding: "10px 12px" }}>
+        <Badge>
+          {p.kelas || dataSiswa?.kelas || "-"}
+        </Badge>
+      </td>
+
+      <td style={{ padding: "10px 12px", fontSize: 12 }}>
+        {p.jenis}
+      </td>
+
+      <td style={{ padding: "10px 12px" }}>
+        <span
+          style={{
+            background:
+              p.kategori === "Ringan"
+                ? C.emeraldLight
+                : p.kategori === "Sedang"
+                ? C.goldLight
+                : C.redLight,
+            color:
+              p.kategori === "Ringan"
+                ? C.emeraldDark
+                : p.kategori === "Sedang"
+                ? C.gold
+                : C.red,
+            padding: "2px 8px",
+            borderRadius: 99,
+            fontSize: 11,
+            fontWeight: 600
           }}
+        >
+          {p.kategori}
+        </span>
+      </td>
+
+      <td style={{ padding: "10px 12px", fontWeight: 700, color: C.red }}>
+        +{p.poin}
+      </td>
+
+      <td style={{ padding: "10px 12px", fontSize: 12 }}>
+        {p.guru}
+      </td>
+
+      <td style={{ padding: "10px 12px" }}>
+        <span
+          style={{
+            background: sp.bg,
+            color: sp.color,
+            padding: "2px 8px",
+            borderRadius: 99,
+            fontSize: 11,
+            fontWeight: 600
+          }}
+        >
+          {sp.level}
+        </span>
+      </td>
+      <td style={{ padding: "10px 12px" }}>
+  <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+    <Btn
+      small
+      variant="ghost"
+      onClick={() => handleEdit(p)}
+    >
+      ✏️ Edit
+    </Btn>
+
+    <Btn
+      small
+      onClick={() => handleDelete(p.id)}
+    >
+      🗑️ Hapus
+    </Btn>
+  </div>
+</td>
+    </>
+  );
+}}
         />
       </Card>
 
@@ -1378,7 +2136,17 @@ function ModulApresiasi({ user, siswa, pelanggaran, apresiasi, setApresiasi }) {
   const [modal, setModal] = useState(false);
   const [searchSiswa, setSearchSiswa] = useState("");
   const [kelasFilter, setKelasFilter] = useState("");
-  const [form, setForm] = useState({ nisn:"", kelas:"", jenis:"", pengurangan:10, tanggal: new Date().toISOString().split("T")[0], guru: user.name, keterangan:"", jenisCustom:"" });
+  const [form, setForm] = useState({
+  id: null,
+  nisn: "",
+  kelas: "",
+  jenis: "",
+  pengurangan: 10,
+  tanggal: new Date().toISOString().split("T")[0],
+  guru: user.name,
+  keterangan: "",
+  jenisCustom: ""
+});
   const [jenisLainnya, setJenisLainnya] = useState(false);
 
   const canEdit = ["admin", "bk", "kesiswaan", "walas", "kepsek", "qiroati"].includes(user.role);
@@ -1390,15 +2158,91 @@ function ModulApresiasi({ user, siswa, pelanggaran, apresiasi, setApresiasi }) {
     if (val === "Lainnya") { setJenisLainnya(true); setForm(f => ({ ...f, jenis: "Lainnya" })); }
     else { setJenisLainnya(false); const j = JENIS_APRESIASI.find(a => a.nama === val); setForm(f => ({ ...f, jenis: val, pengurangan: j?.pengurangan || 0 })); }
   };
-  const handleSave = () => {
-    const s = siswa.find(s => s.nisn === form.nisn);
-    if (!s) return;
-    const jenis = jenisLainnya ? form.jenisCustom : form.jenis;
-    setApresiasi(prev => [...prev, { id: Date.now(), ...form, jenis, nama: s.nama }]);
-    setModal(false);
+  const handleSave = async () => {
+  const s = siswa.find(
+    s => s.nipd === form.nisn || s.nisn === form.nisn
+  );
+
+  if (!s) return;
+
+  const jenis = jenisLainnya ? form.jenisCustom : form.jenis;
+
+  const payload = {
+    nisn: form.nisn,
+    nama: s.nama,
+    kelas: s.kelas,
+    jenis: jenis,
+    poin: form.pengurangan,
+    tanggal: form.tanggal,
+    keterangan: form.keterangan || "",
+    guru: form.guru
   };
 
-  return (
+  // MODE EDIT
+  if (form.id) {
+    const { data, error } = await supabase
+      .from("apresiasi")
+      .update(payload)
+      .eq("id", form.id)
+      .select();
+
+    if (!error) {
+      setApresiasi(prev =>
+        prev.map(item =>
+          item.id === form.id ? data[0] : item
+        )
+      );
+
+      setModal(false);
+    }
+
+    return;
+  }
+
+  // MODE TAMBAH
+  const { data, error } = await supabase
+    .from("apresiasi")
+    .insert([payload])
+    .select();
+
+  if (!error && data) {
+    setApresiasi(prev => [...prev, ...data]);
+    setModal(false);
+  }
+};
+const handleDeleteApresiasi = async (id) => {
+  if (!window.confirm("Yakin ingin menghapus data ini?")) return;
+
+  const { error } = await supabase
+    .from("apresiasi")
+    .delete()
+    .eq("id", id);
+
+  if (error) {
+    alert("Gagal menghapus data");
+    return;
+  }
+
+  setApresiasi(prev =>
+    prev.filter(item => item.id !== id)
+  );
+};
+const handleEditApresiasi = (a) => {
+  setForm({
+    id: a.id,
+    nisn: a.nisn,
+    kelas: a.kelas,
+    jenis: a.jenis,
+    pengurangan: a.poin,
+    tanggal: a.tanggal,
+    guru: a.guru,
+    keterangan: a.keterangan || "",
+    jenisCustom: ""
+  });
+
+  setModal(true);
+};
+return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
         <div>
@@ -1417,17 +2261,59 @@ function ModulApresiasi({ user, siswa, pelanggaran, apresiasi, setApresiasi }) {
 
       <Card>
         <Table
-          cols={["Tanggal", "Nama", "Kelas", "Jenis Apresiasi", "Pengurangan Poin", "Keterangan", "Guru"]}
+          cols={["Tanggal", "Nama", "Kelas", "Jenis Apresiasi", "Pengurangan Poin", "Keterangan", "Guru", "Aksi"]}
           rows={apresiasi}
           renderRow={(a) => <>
-            <td style={{ padding: "10px 12px", fontSize: 12 }}>{formatDate(a.tanggal)}</td>
-            <td style={{ padding: "10px 12px", fontWeight: 600 }}>{a.nama}</td>
-            <td style={{ padding: "10px 12px" }}><Badge>{a.kelas}</Badge></td>
-            <td style={{ padding: "10px 12px" }}><Badge color={C.gold} bg={C.goldLight}>{a.jenis}</Badge></td>
-            <td style={{ padding: "10px 12px", fontWeight: 700, color: C.emerald }}>-{a.pengurangan} poin</td>
-            <td style={{ padding: "10px 12px", fontSize: 12, color: C.gray600 }}>{a.keterangan || "-"}</td>
-            <td style={{ padding: "10px 12px", fontSize: 12 }}>{a.guru}</td>
-          </>}
+  <td style={{ padding: "10px 12px", fontSize: 12 }}>
+    {formatDate(a.tanggal)}
+  </td>
+
+  <td style={{ padding: "10px 12px", fontWeight: 600 }}>
+    {a.nama}
+  </td>
+
+  <td style={{ padding: "10px 12px" }}>
+    <Badge>{a.kelas}</Badge>
+  </td>
+
+  <td style={{ padding: "10px 12px" }}>
+    <Badge color={C.gold} bg={C.goldLight}>
+      {a.jenis}
+    </Badge>
+  </td>
+
+  <td style={{ padding: "10px 12px", fontWeight: 700, color: C.emerald }}>
+    -{a.poin} poin
+  </td>
+
+  <td style={{ padding: "10px 12px", fontSize: 12, color: C.gray600 }}>
+    {a.keterangan || "-"}
+  </td>
+
+  <td style={{ padding: "10px 12px", fontSize: 12 }}>
+    {a.guru}
+  </td>
+
+  <td style={{ padding: "10px 12px" }}>
+    <div style={{ display: "flex", gap: 6 }}>
+      <Btn
+        small
+        variant="gold"
+        onClick={() => handleEditApresiasi(a)}
+      >
+        Edit
+      </Btn>
+
+      <Btn
+        small
+        variant="danger"
+        onClick={() => handleDeleteApresiasi(a.id)}
+      >
+        Hapus
+      </Btn>
+    </div>
+  </td>
+</>}
         />
       </Card>
 
@@ -1474,13 +2360,97 @@ function ModulQiroati({ user, siswa, hafalan, setHafalan }) {
   const filtered = hafalan.filter(h => (tipeFilter === "" || h.tipe === tipeFilter) && (kelasFilter === "" || h.kelas === kelasFilter));
 
   const handleSiswaSelect = (s) => { setForm(f => ({ ...f, nisn: s.nisn, kelas: s.kelas })); setSearchSiswa(s.nama); };
-  const handleSave = () => {
-    const s = siswa.find(s => s.nisn === form.nisn);
-    if (!s || !form.capaian) return;
-    setHafalan(prev => [...prev, { id: Date.now(), ...form, nama: s.nama }]);
-    setModal(false);
+ const handleSave = async () => {
+  const s = siswa.find(s => s.nisn === form.nisn);
+
+  if (!s || !form.capaian) return;
+
+  const payload = {
+    nisn: form.nisn,
+    nama: s.nama,
+    kelas: s.kelas,
+    tanggal: form.tanggal,
+    tipe: form.tipe,
+    capaian: form.capaian,
+    kelancaran: form.kelancaran,
+    status: form.status,
+    guru: form.guru,
+    catatan: ""
   };
 
+  // EDIT DATA
+  if (form.id) {
+    const { data, error } = await supabase
+      .from("qiroati")
+      .update(payload)
+      .eq("id", form.id)
+      .select();
+
+    if (error) {
+      alert(error.message);
+      return;
+    }
+
+    setHafalan(prev =>
+      prev.map(item =>
+        item.id === form.id ? data[0] : item
+      )
+    );
+
+    setModal(false);
+    return;
+  }
+
+  // TAMBAH DATA BARU
+  const { data, error } = await supabase
+    .from("qiroati")
+    .insert([payload])
+    .select();
+
+  if (error) {
+    alert(error.message);
+    return;
+  }
+
+  setHafalan(prev => [...prev, ...data]);
+
+  setModal(false);
+};
+
+const handleEdit = (data) => {
+  setForm({
+    id: data.id,
+    nisn: data.nisn,
+    kelas: data.kelas,
+    tanggal: data.tanggal,
+    capaian: data.capaian,
+    tipe: data.tipe,
+    kelancaran: data.kelancaran,
+    status: data.status,
+    guru: data.guru
+  });
+
+  setSearchSiswa(data.nama);
+  setModal(true);
+};
+
+const handleDelete = async (id) => {
+  if (!window.confirm("Yakin ingin menghapus data ini?")) return;
+
+  const { error } = await supabase
+    .from("qiroati")
+    .delete()
+    .eq("id", id);
+
+  if (error) {
+    alert(error.message);
+    return;
+  }
+
+  setHafalan(prev =>
+    prev.filter(item => item.id !== id)
+  );
+};
   // Rankings
   const rankHafalan = siswa.map(s => ({ nama: s.nama, kelas: s.kelas, total: hafalan.filter(h => h.nisn === s.nisn && h.status === "Lulus").length })).sort((a, b) => b.total - a.total).slice(0, 5);
   const rankRajin = siswa.map(s => ({ nama: s.nama, kelas: s.kelas, total: hafalan.filter(h => h.nisn === s.nisn).length })).sort((a, b) => b.total - a.total).slice(0, 5);
@@ -1493,7 +2463,26 @@ function ModulQiroati({ user, siswa, hafalan, setHafalan }) {
           <div style={{ fontWeight: 800, fontSize: 20, color: C.emeraldDark }}>📖 Modul Qiroati</div>
           <div style={{ color: C.gray600, fontSize: 13 }}>Tahfidz • Tahsin • Jilid 1-4 • Tajwid Ghorib</div>
         </div>
-        {["admin", "qiroati"].includes(user.role) && <Btn onClick={() => { setForm({ nisn:"", kelas:"", tanggal: new Date().toISOString().split("T")[0], capaian:"", tipe:"Tahfidz", kelancaran:"Lancar", status:"Lulus", guru: user.name }); setSearchSiswa(""); setModal(true); }}>+ Input Setoran</Btn>}
+        {["admin", "qiroati"].includes(user.role) && 
+  <Btn onClick={() => {
+    setForm({
+      id: null,
+      nisn:"",
+      kelas:"",
+      tanggal: new Date().toISOString().split("T")[0],
+      capaian:"",
+      tipe:"Tahfidz",
+      kelancaran:"Lancar",
+      status:"Lulus",
+      guru: user.name
+    });
+
+    setSearchSiswa("");
+    setModal(true);
+  }}>
+    + Input Setoran
+  </Btn>
+}
       </div>
 
       {/* Stats */}
@@ -1547,7 +2536,7 @@ function ModulQiroati({ user, siswa, hafalan, setHafalan }) {
 
       <Card>
         <Table
-          cols={["Tanggal", "Nama", "Kelas", "Tipe", "Capaian", "Kelancaran", "Status"]}
+          cols={["Tanggal", "Nama", "Kelas", "Tipe", "Capaian", "Kelancaran", "Status", "Aksi"]}
           rows={filtered}
           renderRow={(h) => <>
             <td style={{ padding: "10px 12px", fontSize: 12 }}>{formatDate(h.tanggal)}</td>
@@ -1557,6 +2546,25 @@ function ModulQiroati({ user, siswa, hafalan, setHafalan }) {
             <td style={{ padding: "10px 12px", fontSize: 12 }}>{h.capaian}</td>
             <td style={{ padding: "10px 12px", fontSize: 12 }}>{h.kelancaran}</td>
             <td style={{ padding: "10px 12px" }}><Badge color={h.status === "Lulus" ? C.emeraldDark : C.red} bg={h.status === "Lulus" ? C.emeraldLight : C.redLight}>{h.status}</Badge></td>
+          <td style={{ padding: "10px 12px" }}>
+  <div style={{ display: "flex", gap: 6 }}>
+    <Btn
+      small
+      variant="gold"
+      onClick={() => handleEdit(h)}
+    >
+      Edit
+    </Btn>
+
+    <Btn
+      small
+      variant="danger"
+      onClick={() => handleDelete(h.id)}
+    >
+      Hapus
+    </Btn>
+  </div>
+</td>
           </>}
         />
       </Card>
@@ -1597,21 +2605,124 @@ function ModulVocab({ user, siswa, vocab, setVocab }) {
   const [searchSiswa, setSearchSiswa] = useState("");
   const [kelasFilter, setKelasFilter] = useState("");
   const [form, setForm] = useState({ nisn:"", kelas:"", tanggal: new Date().toISOString().split("T")[0], jumlah:0, keterangan:"", guru: user.name });
-
+const [editId, setEditId] = useState(null);
   const filteredSiswa = siswa.filter(s => (form.kelas === "" || s.kelas === form.kelas) && (searchSiswa === "" || s.nama.toLowerCase().includes(searchSiswa.toLowerCase())));
   const filtered = vocab.filter(v => kelasFilter === "" || v.kelas === kelasFilter);
 
   const handleSiswaSelect = (s) => { setForm(f => ({ ...f, nisn: s.nisn, kelas: s.kelas })); setSearchSiswa(s.nama); };
-  const handleSave = () => {
-    const s = siswa.find(s => s.nisn === form.nisn);
-    if (!s || form.jumlah <= 0) return;
-    setVocab(prev => [...prev, { id: Date.now(), ...form, nama: s.nama }]);
-    setModal(false);
+const handleSave = async () => {
+  const s = siswa.find((x) => x.nisn === form.nisn);
+
+  if (!s) {
+    alert("Pilih siswa terlebih dahulu");
+    return;
+  }
+
+  const payload = {
+    nisn: form.nisn,
+    nama: s.nama,
+    kelas: s.kelas,
+    jumlah: form.jumlah,
+    keterangan: form.keterangan,
+    tanggal: form.tanggal,
+    guru: form.guru
   };
 
+  // MODE EDIT
+  if (editId) {
+    const { data, error } = await supabase
+      .from("vocab")
+      .update(payload)
+      .eq("id", editId)
+      .select()
+      .single();
+
+    if (error) {
+      console.log(error);
+      alert("Gagal mengupdate data");
+      return;
+    }
+
+    setVocab(prev =>
+      prev.map(item =>
+        item.id === editId
+          ? data
+          : item
+      )
+    );
+
+    alert("Data berhasil diperbarui");
+  }
+
+  // MODE TAMBAH
+  else {
+    const { data, error } = await supabase
+      .from("vocab")
+      .insert([payload])
+      .select();
+
+    if (error) {
+      console.log(error);
+      alert("Gagal menyimpan data");
+      return;
+    }
+
+    setVocab(prev => [...prev, ...data]);
+
+    alert("Data berhasil ditambahkan");
+  }
+
+  // reset form
+  setEditId(null);
+
+  setForm({
+    nisn: "",
+    kelas: "",
+    tanggal: new Date().toISOString().split("T")[0],
+    jumlah: 0,
+    keterangan: "",
+    guru: user.name
+  });
+
+  setSearchSiswa("");
+  setModal(false);
+};
   const rankVocab = siswa.map(s => ({ nama: s.nama, kelas: s.kelas, total: totalVocabSiswa(s.nisn, vocab) })).sort((a, b) => b.total - a.total).slice(0, 5);
   const vocabKelas = KELAS_LIST.slice(0, 8).map(k => ({ label: k, value: vocab.filter(v => v.kelas === k).reduce((s, v) => s + v.jumlah, 0) }));
+const handleDelete = async (id) => {
+  if (!window.confirm("Yakin ingin menghapus data ini?")) return;
 
+  const { error } = await supabase
+    .from("vocab")
+    .delete()
+    .eq("id", id);
+
+  if (error) {
+    console.log(error);
+    alert("Gagal menghapus data");
+    return;
+  }
+
+  setVocab(prev => prev.filter(v => v.id !== id));
+
+  alert("Data berhasil dihapus");
+};
+const handleEdit = (data) => {
+  setEditId(data.id);
+
+  setForm({
+    nisn: data.nisn,
+    kelas: data.kelas,
+    tanggal: data.tanggal,
+    jumlah: data.jumlah,
+    keterangan: data.keterangan,
+    guru: data.guru
+  });
+
+  setSearchSiswa(data.nama);
+
+  setModal(true);
+};
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
@@ -1648,20 +2759,67 @@ function ModulVocab({ user, siswa, vocab, setVocab }) {
 
       <Card>
         <Table
-          cols={["Tanggal", "Nama", "Kelas", "Jumlah Vocab", "Keterangan", "Guru"]}
+          cols={["Tanggal", "Nama", "Kelas", "Jumlah Vocab", "Keterangan", "Guru", "Aksi"]}
           rows={filtered}
-          renderRow={(v) => <>
-            <td style={{ padding: "10px 12px", fontSize: 12 }}>{formatDate(v.tanggal)}</td>
-            <td style={{ padding: "10px 12px", fontWeight: 600 }}>{v.nama}</td>
-            <td style={{ padding: "10px 12px" }}><Badge>{v.kelas}</Badge></td>
-            <td style={{ padding: "10px 12px", fontWeight: 700, color: C.gold }}>{v.jumlah} kata</td>
-            <td style={{ padding: "10px 12px", fontSize: 12 }}>{v.keterangan}</td>
-            <td style={{ padding: "10px 12px", fontSize: 12 }}>{v.guru}</td>
-          </>}
+          renderRow={(v) => (
+  <>
+    <td style={{ padding: "10px 12px", fontSize: 12 }}>
+      {formatDate(v.tanggal)}
+    </td>
+
+    <td style={{ padding: "10px 12px", fontWeight: 600 }}>
+      {v.nama}
+    </td>
+
+    <td style={{ padding: "10px 12px" }}>
+      <Badge>{v.kelas}</Badge>
+    </td>
+
+    <td style={{ padding: "10px 12px", fontWeight: 700, color: C.gold }}>
+      {v.jumlah} kata
+    </td>
+
+    <td style={{ padding: "10px 12px", fontSize: 12 }}>
+      {v.keterangan}
+    </td>
+
+    <td style={{ padding: "10px 12px", fontSize: 12 }}>
+      {v.guru}
+    </td>
+
+    <td style={{ padding: "10px 12px" }}>
+      <div style={{ display: "flex", gap: 6 }}>
+        <Btn
+          onClick={() => handleEdit(v)}
+          style={{
+            padding: "4px 10px",
+            fontSize: 12
+          }}
+        >
+          ✏️ Edit
+        </Btn>
+
+        <Btn
+          onClick={() => handleDelete(v.id)}
+          style={{
+            padding: "4px 10px",
+            fontSize: 12
+          }}
+        >
+          🗑️ Hapus
+        </Btn>
+      </div>
+    </td>
+  </>
+)}
         />
       </Card>
 
-      <Modal open={modal} onClose={() => setModal(false)} title="Input Setoran Vocab">
+      <Modal
+  open={modal}
+  onClose={() => setModal(false)}
+  title={editId ? "Edit Data Vocab" : "Input Setoran Vocab"}
+>
         <Select label="Filter Kelas" value={form.kelas} onChange={e => setForm(f => ({ ...f, kelas: e.target.value }))} options={[{ value: "", label: "Semua Kelas" }, ...KELAS_LIST.map(k => ({ value: k, label: k }))]} />
         <div style={{ marginBottom: 14 }}>
           <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: C.gray700, marginBottom: 5 }}>Cari Siswa</label>
@@ -1682,7 +2840,9 @@ function ModulVocab({ user, siswa, vocab, setVocab }) {
         <Input label="Tanggal" type="date" value={form.tanggal} onChange={e => setForm(f => ({ ...f, tanggal: e.target.value }))} />
         <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
           <Btn variant="ghost" onClick={() => setModal(false)}>Batal</Btn>
-          <Btn variant="gold" onClick={handleSave}>Simpan</Btn>
+          <Btn variant="gold" onClick={handleSave}>
+  {editId ? "Update" : "Simpan"}
+</Btn>
         </div>
       </Modal>
     </div>
@@ -1691,12 +2851,25 @@ function ModulVocab({ user, siswa, vocab, setVocab }) {
 
 // ===================== MODUL ABSENSI =====================
 function ModulAbsensi({ user, siswa, absensi, setAbsensi }) {
+  const [editModal, setEditModal] = useState(false);
+const [editId, setEditId] = useState(null);
   const [modal, setModal] = useState(false);
+const [formAbsensi, setFormAbsensi] = useState({
+  status: "",
+  keterangan: ""
+});
   const [kelasFilter, setKelasFilter] = useState(user.kelas || "7A");
   const [tanggal, setTanggal] = useState(new Date().toISOString().split("T")[0]);
   const [bulkAbsensi, setBulkAbsensi] = useState({});
+const [siswaRiwayat, setSiswaRiwayat] = useState(null);
+const [modalRiwayat, setModalRiwayat] = useState(false);  
 
   const siswaKelas = siswa.filter(s => s.kelas === kelasFilter);
+  console.log("KELAS FILTER:", kelasFilter);
+
+siswa.forEach(s => {
+  console.log("NAMA:", s.nama, "KELAS:", s.kelas);
+});
   const absensiFiltered = absensi.filter(a => a.kelas === kelasFilter);
 
   const initBulk = () => {
@@ -1704,22 +2877,129 @@ function ModulAbsensi({ user, siswa, absensi, setAbsensi }) {
     siswaKelas.forEach(s => { b[s.nisn] = "Hadir"; });
     setBulkAbsensi(b);
   };
+const handleSaveAbsensi = async () => {
+  const newAbsensi = Object.entries(bulkAbsensi).map(([nisn, status]) => {
+    const s = siswaKelas.find((x) => x.nisn === nisn);
 
-  const handleSaveAbsensi = () => {
-    const newAbsensi = Object.entries(bulkAbsensi).map(([nisn, status]) => {
-      const s = siswaKelas.find(s => s.nisn === nisn);
-      return { id: Date.now() + Math.random(), nisn, nama: s?.nama, kelas: kelasFilter, tanggal, status, keterangan: "" };
-    });
-    setAbsensi(prev => [...prev.filter(a => !(a.kelas === kelasFilter && a.tanggal === tanggal)), ...newAbsensi]);
-    setModal(false);
-  };
+    return {
+      nisn,
+      nama: s?.nama,
+      kelas: kelasFilter,
+      tanggal,
+      status,
+      keterangan: ""
+    };
+  });
 
+  const { error: deleteError } = await supabase
+    .from("absensi")
+    .delete()
+    .eq("kelas", kelasFilter)
+    .eq("tanggal", tanggal);
+
+  if (deleteError) {
+    console.log(deleteError);
+    return;
+  }
+
+  const { data, error } = await supabase
+    .from("absensi")
+    .insert(newAbsensi)
+    .select();
+
+  if (error) {
+    console.log(error);
+    return;
+  }
+
+  setAbsensi((prev) => [
+    ...prev.filter(
+      (a) => !(a.kelas === kelasFilter && a.tanggal === tanggal)
+    ),
+    ...data
+  ]);
+
+  setModal(false);
+};
+const handleEditAbsensi = (a) => {
+  console.log("EDIT CLICK:", a);
+
+  setEditId(a.id);
+
+  setFormAbsensi({
+    status: a.status || "Hadir",
+    keterangan: a.keterangan || ""
+  });
+
+  setEditModal(true);
+};
+const handleUpdateAbsensi = async () => {
+  const { data, error } = await supabase
+    .from("absensi")
+    .update({
+      status: formAbsensi.status,
+      keterangan: formAbsensi.keterangan
+    })
+    .eq("id", editId)
+    .select()
+    .single();
+
+  if (error) {
+    console.log(error);
+    return;
+  }
+
+  setAbsensi((prev) =>
+    prev.map((item) =>
+      item.id === editId ? data : item
+    )
+  );
+
+  setEditModal(false);
+  setEditId(null);
+};
   // Stats absensi kelas
-  const hadir = absensiFiltered.filter(a => a.status === "Hadir").length;
-  const sakit = absensiFiltered.filter(a => a.status === "Sakit").length;
-  const izin = absensiFiltered.filter(a => a.status === "Izin").length;
-  const alpa = absensiFiltered.filter(a => a.status === "Alpa").length;
+  // Stats absensi kelas
+const hadir = absensiFiltered.filter(a => a.status === "Hadir").length;
+const sakit = absensiFiltered.filter(a => a.status === "Sakit").length;
+const izin = absensiFiltered.filter(a => a.status === "Izin").length;
+const alpa = absensiFiltered.filter(a => a.status === "Alpa").length;
 
+// DATA GRAFIK
+const grafikAbsensi = [
+  {
+    kategori: "Hadir",
+    jumlah: hadir
+  },
+  {
+    kategori: "Sakit",
+    jumlah: sakit
+  },
+  {
+    kategori: "Izin",
+    jumlah: izin
+  },
+  {
+    kategori: "Alpa",
+    jumlah: alpa
+  }
+];
+const riwayatSiswa = siswaRiwayat
+  ? absensi
+      .filter(a => a.nisn === siswaRiwayat.nisn)
+      .sort((a,b) => new Date(b.tanggal) - new Date(a.tanggal))
+  : [];
+  const totalHadir =
+  riwayatSiswa.filter(a => a.status === "Hadir").length;
+
+const totalSakit =
+  riwayatSiswa.filter(a => a.status === "Sakit").length;
+
+const totalIzin =
+  riwayatSiswa.filter(a => a.status === "Izin").length;
+
+const totalAlpa =
+  riwayatSiswa.filter(a => a.status === "Alpa").length;
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
@@ -1743,45 +3023,320 @@ function ModulAbsensi({ user, siswa, absensi, setAbsensi }) {
           <StatCard icon="❌" label="Alpa" value={alpa} color={C.red} />
         </div>
       </Card>
+<Card style={{ marginBottom: 20 }}>
+  <div
+    style={{
+      fontWeight: 700,
+      color: C.emeraldDark,
+      marginBottom: 12
+    }}
+  >
+    📊 Grafik Kehadiran
+  </div>
 
-      <Card>
-        <div style={{ fontWeight: 700, color: C.emeraldDark, marginBottom: 14 }}>Riwayat Absensi Kelas {kelasFilter}</div>
-        <Table
-          cols={["Tanggal", "Nama", "Status", "Keterangan"]}
-          rows={absensiFiltered.slice(-20).reverse()}
-          renderRow={(a) => <>
-            <td style={{ padding: "10px 12px", fontSize: 12 }}>{formatDate(a.tanggal)}</td>
-            <td style={{ padding: "10px 12px", fontWeight: 600 }}>{a.nama}</td>
-            <td style={{ padding: "10px 12px" }}>
-              <Badge color={a.status === "Hadir" ? C.emeraldDark : a.status === "Sakit" ? C.gold : a.status === "Izin" ? C.blue : C.red}
-                bg={a.status === "Hadir" ? C.emeraldLight : a.status === "Sakit" ? C.goldLight : a.status === "Izin" ? C.blueLight : C.redLight}>
-                {a.status}
-              </Badge>
-            </td>
-            <td style={{ padding: "10px 12px", fontSize: 12 }}>{a.keterangan || "-"}</td>
-          </>}
-        />
+  {grafikAbsensi.map((g) => {
+    const total = hadir + sakit + izin + alpa;
+
+    const persen =
+      total > 0
+        ? (g.jumlah / total) * 100
+        : 0;
+
+    return (
+      <div key={g.kategori} style={{ marginBottom: 12 }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            marginBottom: 4
+          }}
+        >
+          <span>{g.kategori}</span>
+          <span>
+            {g.jumlah} ({persen.toFixed(1)}%)
+          </span>
+        </div>
+
+        <div
+          style={{
+            height: 12,
+            background: "#eee",
+            borderRadius: 8
+          }}
+        >
+          <div
+            style={{
+              width: `${persen}%`,
+              height: "100%",
+              background: C.emerald,
+              borderRadius: 8
+            }}
+          />
+        </div>
+      </div>
+    );
+  })}
+</Card>
+<Card>
+  <div style={{ fontWeight: 700, color: C.emeraldDark, marginBottom: 14 }}>
+    Riwayat Absensi Kelas {kelasFilter}
+  </div>
+
+  <Table
+    cols={["Tanggal", "Nama", "Status", "Keterangan", "Aksi"]}
+    rows={absensiFiltered.slice(-20).reverse()}
+    renderRow={(a) => (
+      <>
+        <td style={{ padding: "10px 12px", fontSize: 12 }}>
+          {formatDate(a.tanggal)}
+        </td>
+
+        <td style={{ padding: "10px 12px", fontWeight: 600 }}>
+          {a.nama}
+        </td>
+
+        <td style={{ padding: "10px 12px" }}>
+          <Badge>{a.status}</Badge>
+        </td>
+
+        <td style={{ padding: "10px 12px", fontSize: 12, maxWidth: 250 }}>
+          {a.keterangan || "-"}
+        </td>
+
+        <td style={{ padding: "10px 12px", display:"flex", gap:6 }}>
+  <Btn onClick={() => handleEditAbsensi(a)}>
+    Edit
+  </Btn>
+
+  <Btn
+    variant="ghost"
+    onClick={() => {
+      setSiswaRiwayat(a);
+      setModalRiwayat(true);
+    }}
+  >
+    Riwayat
+  </Btn>
+</td>
+      </>
+    )}
+  />
+</Card>
+<Modal
+  open={modal}
+  onClose={() => setModal(false)}
+  title={`Input Absensi ${kelasFilter}`}
+>
+  <div style={{ marginBottom: 12 }}>
+    <label>Tanggal</label>
+
+    <input
+      type="date"
+      value={tanggal}
+      onChange={(e) => setTanggal(e.target.value)}
+      style={{
+        width: "100%",
+        padding: 8,
+        borderRadius: 8,
+        border: `1px solid ${C.gray200}`
+      }}
+    />
+  </div>
+
+  <div
+    style={{
+      maxHeight: 400,
+      overflowY: "auto"
+    }}
+  >
+    {siswaKelas.map((s) => (
+      <div
+        key={s.nisn}
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: 8,
+          padding: 8,
+          border: `1px solid ${C.gray100}`,
+          borderRadius: 8
+        }}
+      >
+        <div>
+          <div style={{ fontWeight: 600 }}>
+            {s.nama}
+          </div>
+          <div style={{ fontSize: 12 }}>
+            {s.nisn}
+          </div>
+        </div>
+
+        <select
+          value={bulkAbsensi[s.nisn] || "Hadir"}
+          onChange={(e) =>
+            setBulkAbsensi((prev) => ({
+              ...prev,
+              [s.nisn]: e.target.value
+            }))
+          }
+        >
+          <option value="Hadir">Hadir</option>
+          <option value="Sakit">Sakit</option>
+          <option value="Izin">Izin</option>
+          <option value="Alpa">Alpa</option>
+        </select>
+      </div>
+    ))}
+  </div>
+
+  <div
+    style={{
+      display: "flex",
+      justifyContent: "flex-end",
+      gap: 10,
+      marginTop: 16
+    }}
+  >
+    <Btn
+      variant="ghost"
+      onClick={() => setModal(false)}
+    >
+      Batal
+    </Btn>
+
+    <Btn onClick={handleSaveAbsensi}>
+      Simpan Absensi
+    </Btn>
+  </div>
+</Modal>
+      <Modal
+  open={editModal}
+  onClose={() => setEditModal(false)}
+  title="Edit Absensi"
+>
+  <div style={{ marginBottom: 12 }}>
+    <label>Status</label>
+
+    <select
+      value={formAbsensi.status}
+      onChange={(e) =>
+        setFormAbsensi((f) => ({
+          ...f,
+          status: e.target.value
+        }))
+      }
+    >
+      <option value="Hadir">Hadir</option>
+      <option value="Sakit">Sakit</option>
+      <option value="Izin">Izin</option>
+      <option value="Alpa">Alpa</option>
+    </select>
+  </div>
+
+  <Input
+    label="Keterangan"
+    value={formAbsensi.keterangan}
+    onChange={(e) =>
+      setFormAbsensi((f) => ({
+        ...f,
+        keterangan: e.target.value
+      }))
+    }
+  />
+
+  <div
+    style={{
+      display: "flex",
+      justifyContent: "flex-end",
+      gap: 10,
+      marginTop: 16
+    }}
+  >
+    <Btn
+      variant="ghost"
+      onClick={() => setEditModal(false)}
+    >
+      Batal
+    </Btn>
+
+    <Btn onClick={handleUpdateAbsensi}>
+      Simpan
+    </Btn>
+  </div>
+</Modal>
+<Modal
+  open={modalRiwayat}
+  onClose={() => setModalRiwayat(false)}
+  title="Riwayat Absensi Siswa"
+>
+  {siswaRiwayat && (
+    <>
+      <Card style={{ marginBottom: 16 }}>
+        <div><b>Nama:</b> {siswaRiwayat.nama}</div>
+        <div><b>Kelas:</b> {siswaRiwayat.kelas}</div>
+
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: isMobile
+  ? "1fr"
+  : "repeat(4,1fr)",
+            gap: 10,
+            marginTop: 12
+          }}
+        >
+          <StatCard
+            icon="✅"
+            label="Hadir"
+            value={totalHadir}
+            color={C.emerald}
+          />
+
+          <StatCard
+            icon="🤒"
+            label="Sakit"
+            value={totalSakit}
+            color={C.gold}
+          />
+
+          <StatCard
+            icon="📝"
+            label="Izin"
+            value={totalIzin}
+            color={C.blue}
+          />
+
+          <StatCard
+            icon="❌"
+            label="Alpa"
+            value={totalAlpa}
+            color={C.red}
+          />
+        </div>
       </Card>
 
-      <Modal open={modal} onClose={() => setModal(false)} title={`Input Absensi Kelas ${kelasFilter}`}>
-        <Input label="Tanggal" type="date" value={tanggal} onChange={e => setTanggal(e.target.value)} />
-        <div style={{ maxHeight: 300, overflowY: "auto" }}>
-          {siswaKelas.map(s => (
-            <div key={s.nisn} style={{ display: "flex", alignItems: "center", gap: 12, padding: "8px 0", borderBottom: `1px solid ${C.gray100}` }}>
-              <div style={{ flex: 1, fontSize: 13, fontWeight: 600 }}>{s.nama}</div>
-              <select value={bulkAbsensi[s.nisn] || "Hadir"} onChange={e => setBulkAbsensi(b => ({ ...b, [s.nisn]: e.target.value }))}
-                style={{ border: `1.5px solid ${C.gray200}`, borderRadius: 8, padding: "4px 8px", fontSize: 12, outline: "none" }}>
-                {["Hadir", "Sakit", "Izin", "Alpa"].map(st => <option key={st} value={st}>{st}</option>)}
-              </select>
-            </div>
-          ))}
-        </div>
-        <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 16 }}>
-          <Btn variant="ghost" onClick={() => setModal(false)}>Batal</Btn>
-          <Btn onClick={handleSaveAbsensi}>Simpan Absensi</Btn>
-        </div>
-      </Modal>
-    </div>
+      <Table
+        cols={["Tanggal", "Status", "Keterangan"]}
+        rows={riwayatSiswa}
+        renderRow={(r) => (
+          <>
+            <td style={{ padding: "8px" }}>
+              {formatDate(r.tanggal)}
+            </td>
+
+            <td style={{ padding: "8px" }}>
+              <Badge>{r.status}</Badge>
+            </td>
+
+            <td style={{ padding: "8px" }}>
+              {r.keterangan || "-"}
+            </td>
+          </>
+        )}
+      />
+    </>
+  )}
+</Modal>    </div>
   );
 }
 
@@ -1791,28 +3346,174 @@ function ModulCatatan({ user, siswa, catatan, setCatatan }) {
   const [kelasFilter, setKelasFilter] = useState("");
   const [searchSiswa, setSearchSiswa] = useState("");
   const [form, setForm] = useState({ nisn:"", kelas:"", tanggal: new Date().toISOString().split("T")[0], catatan:"", guru: user.name, tindakLanjut:"" });
-
+const [editId, setEditId] = useState(null);
   const filteredSiswa = siswa.filter(s => (form.kelas === "" || s.kelas === form.kelas) && (searchSiswa === "" || s.nama.toLowerCase().includes(searchSiswa.toLowerCase())));
   const filtered = catatan.filter(c => kelasFilter === "" || c.kelas === kelasFilter);
 
   const handleSiswaSelect = (s) => { setForm(f => ({ ...f, nisn: s.nisn, kelas: s.kelas })); setSearchSiswa(s.nama); };
-  const handleSave = () => {
-    const s = siswa.find(s => s.nisn === form.nisn);
-    if (!s || !form.catatan) return;
-    setCatatan(prev => [...prev, { id: Date.now(), ...form, nama: s.nama }]);
-    setModal(false);
+  const handleSave = async () => {
+  const siswaDipilih = siswa.find(
+    s => s.nisn === form.nisn
+  );
+
+  if (!siswaDipilih) {
+    alert("Pilih siswa terlebih dahulu");
+    return;
+  }
+
+  if (!form.catatan.trim()) {
+    alert("Catatan wajib diisi");
+    return;
+  }
+
+  const payload = {
+    nisn: form.nisn,
+    nama: siswaDipilih.nama,
+    kelas: form.kelas,
+    tanggal: form.tanggal,
+    catatan: form.catatan,
+    guru: form.guru,
+    tindak_lanjut: form.tindakLanjut
   };
+
+  try {
+    if (editId) {
+      const { error } = await supabase
+        .from("catatan")
+        .update(payload)
+        .eq("id", editId);
+
+      if (error) throw error;
+
+      setCatatan(prev =>
+        prev.map(c =>
+          c.id === editId
+            ? { ...c, ...payload }
+            : c
+        )
+      );
+
+      alert("Catatan berhasil diperbarui");
+    } else {
+      const { data, error } = await supabase
+        .from("catatan")
+        .insert([payload])
+        .select();
+
+      if (error) throw error;
+
+      setCatatan(prev => [...data, ...prev]);
+
+      alert("Catatan berhasil disimpan");
+    }
+
+    setModal(false);
+    setEditId(null);
+
+    setForm({
+      nisn: "",
+      kelas: "",
+      tanggal: new Date().toISOString().split("T")[0],
+      catatan: "",
+      guru: user.name,
+      tindakLanjut: ""
+    });
+
+    setSearchSiswa("");
+
+  } catch (err) {
+    console.error(err);
+    alert(err.message);
+  }
+};
+const handleEdit = (c) => {
+  setEditId(c.id);
+
+  setForm({
+    nisn: c.nisn,
+    kelas: c.kelas,
+    tanggal: c.tanggal,
+    catatan: c.catatan,
+    guru: c.guru,
+    tindakLanjut: c.tindak_lanjut || ""
+  });
+
+  setSearchSiswa(c.nama);
+
+  setModal(true);
+};
+const handleDelete = async (id) => {
+  if (!window.confirm("Hapus catatan ini?")) return;
+
+  const { error } = await supabase
+    .from("catatan")
+    .delete()
+    .eq("id", id);
+
+  if (error) {
+    console.error(error);
+    alert("Gagal menghapus");
+    return;
+  }
+
+  setCatatan(prev =>
+    prev.filter(c => c.id !== id)
+  );
+
+  alert("Catatan berhasil dihapus");
+};
 
   return (
     <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-        <div>
-          <div style={{ fontWeight: 800, fontSize: 20, color: C.emeraldDark }}>📝 Catatan Kejadian</div>
-          <div style={{ color: C.gray600, fontSize: 13 }}>Rekam kejadian penting per siswa</div>
-        </div>
-        <Btn onClick={() => { setForm({ nisn:"", kelas:"", tanggal: new Date().toISOString().split("T")[0], catatan:"", guru: user.name, tindakLanjut:"" }); setSearchSiswa(""); setModal(true); }}>+ Tambah Catatan</Btn>
-      </div>
+      <div
+  style={{
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 20
+  }}
+>
+  <div>
+    <div
+      style={{
+        fontWeight: 800,
+        fontSize: 20,
+        color: C.emeraldDark
+      }}
+    >
+      📝 Catatan Kejadian
+    </div>
 
+    <div
+      style={{
+        color: C.gray600,
+        fontSize: 13
+      }}
+    >
+      Rekam kejadian penting per siswa
+    </div>
+  </div>
+
+  <Btn
+    onClick={() => {
+      setEditId(null);
+
+      setForm({
+        nisn: "",
+        kelas: "",
+        tanggal: new Date().toISOString().split("T")[0],
+        catatan: "",
+        guru: user.name,
+        tindakLanjut: ""
+      });
+
+      setSearchSiswa("");
+      setModal(true);
+    }}
+  >
+    + Tambah Catatan
+  </Btn>
+</div>
       <Card style={{ marginBottom: 14 }}>
         <div style={{ display: "flex", gap: 12 }}>
           <select value={kelasFilter} onChange={e => setKelasFilter(e.target.value)} style={{ border: `1.5px solid ${C.gray200}`, borderRadius: 8, padding: "8px 12px", fontSize: 14, outline: "none" }}>
@@ -1824,16 +3525,69 @@ function ModulCatatan({ user, siswa, catatan, setCatatan }) {
 
       <Card>
         <Table
-          cols={["Tanggal", "Nama", "Kelas", "Catatan Kejadian", "Tindak Lanjut", "Guru"]}
+          cols={[
+  "Tanggal",
+  "Nama",
+  "Kelas",
+  "Catatan Kejadian",
+  "Tindak Lanjut",
+  "Guru",
+  "Aksi"
+]}
           rows={filtered}
-          renderRow={(c) => <>
-            <td style={{ padding: "10px 12px", fontSize: 12 }}>{formatDate(c.tanggal)}</td>
-            <td style={{ padding: "10px 12px", fontWeight: 600 }}>{c.nama}</td>
-            <td style={{ padding: "10px 12px" }}><Badge>{c.kelas}</Badge></td>
-            <td style={{ padding: "10px 12px", fontSize: 12, maxWidth: 250 }}>{c.catatan}</td>
-            <td style={{ padding: "10px 12px", fontSize: 12 }}>{c.tindakLanjut || "-"}</td>
-            <td style={{ padding: "10px 12px", fontSize: 12 }}>{c.guru}</td>
-          </>}
+          renderRow={(c) => (
+  <>
+    <td style={{ padding: "10px 12px", fontSize: 12 }}>
+      {formatDate(c.tanggal)}
+    </td>
+
+    <td style={{ padding: "10px 12px", fontWeight: 600 }}>
+      {c.nama}
+    </td>
+
+    <td style={{ padding: "10px 12px" }}>
+      <Badge>{c.kelas}</Badge>
+    </td>
+
+    <td
+      style={{
+        padding: "10px 12px",
+        fontSize: 12,
+        maxWidth: 250
+      }}
+    >
+      {c.catatan}
+    </td>
+
+    <td style={{ padding: "10px 12px", fontSize: 12 }}>
+      {c.tindak_lanjut || "-"}
+    </td>
+
+    <td style={{ padding: "10px 12px", fontSize: 12 }}>
+      {c.guru}
+    </td>
+
+    <td style={{ padding: "10px 12px" }}>
+      <div
+        style={{
+          display: "flex",
+          gap: 8
+        }}
+      >
+        <Btn onClick={() => handleEdit(c)}>
+          Edit
+        </Btn>
+
+        <Btn
+          variant="danger"
+          onClick={() => handleDelete(c.id)}
+        >
+          Hapus
+        </Btn>
+      </div>
+    </td>
+  </>
+)}
         />
       </Card>
 
@@ -1868,28 +3622,284 @@ function ModulCatatan({ user, siswa, catatan, setCatatan }) {
   );
 }
 
-// ===================== MODUL GURU =====================
+// ===================== MODUL GURU (SUDAH DIPERBAIKI) =====================
+// Catatan perbaikan dari kode asli:
+// 1. handleSave SEBELUMNYA salah total — itu kode untuk modul "Catatan/Absensi
+//    Siswa" (pakai siswa, nisn, catatan, tindakLanjut) yang ketempel di Modul
+//    Guru. Sudah diganti dengan logika simpan data GURU (insert & update ke
+//    tabel "guru" via Supabase).
+// 2. handleEditAbsensi dihapus dari file ini karena itu juga bukan bagian dari
+//    Modul Guru (punya state editId, item.nisn, dll — itu milik modul
+//    Absensi/Catatan Siswa). Pastikan kode itu dipasang di modul yang benar,
+//    bukan di sini.
+// 3. handleDelete sudah benar (memang menghapus dari tabel "guru"), saya
+//    rapikan sedikit saja.
+// 4. Ditambahkan DATA_GURU_AWAL (seed) dari file Excel yang Anda kirim, plus
+//    tombol "Impor Data Awal" untuk memasukkannya ke Supabase + state sekali
+//    klik (tombol otomatis hilang kalau data guru sudah ada).
+
+// Data guru hasil ekstrak dari file Excel "Data_Guru_Kebutuhan_Pak_IIK.xlsx"
+// Hanya baris dengan posisi mengandung "Guru" yang dimasukkan (Karyawan,
+// Kepala Sekolah, dan Petugas K5 TIDAK termasuk guru sehingga tidak disertakan).
+// - jabatan dipetakan ke opsi yang sudah ada di form: Guru, Guru BK, Kesiswaan
+// - username dibuat otomatis dari nama depan (huruf kecil, tanpa gelar/spasi)
+// - password default: "guru123" (WAJIB diminta untuk diganti oleh masing-masing guru)
+const DATA_GURU_AWAL = [
+  { nip: "19960620211079", nama: "Ade Fatkhurrokhman, S.Pd",               jabatan: "Guru",      kelas: "", username: "ade",        password: "guru123", aktif: true },
+  { nip: "",               nama: "Alifah Danuk Aryanti, S.Pd.",            jabatan: "Guru",      kelas: "", username: "alifah",     password: "guru123", aktif: true },
+  { nip: "20010220252207", nama: "Ariyj, S.S.",                            jabatan: "Guru",      kelas: "", username: "ariyj",      password: "guru123", aktif: true },
+  { nip: "19971120232156", nama: "Din Noer Siti Azizah, S.Pd",             jabatan: "Guru",      kelas: "", username: "din",        password: "guru123", aktif: true },
+  { nip: "19770720022004", nama: "Ernawati, S.Ag., S.Pd",                  jabatan: "Guru",      kelas: "", username: "ernawati",   password: "guru123", aktif: true },
+  { nip: "20000720231126", nama: "Habib Sultan Maulana, S.Pd",             jabatan: "Guru",      kelas: "", username: "habib",      password: "guru123", aktif: true },
+  { nip: "19980120222085", nama: "Hayu Rahayu, S.Pd",                      jabatan: "Guru",      kelas: "", username: "hayu",       password: "guru123", aktif: true },
+  { nip: "19960720192063", nama: "Hermalia, S.Pd",                         jabatan: "Guru",      kelas: "", username: "hermalia",   password: "guru123", aktif: true },
+  { nip: "20010720241182", nama: "Koko Adji Purnomo, S.Pd.",               jabatan: "Guru",      kelas: "", username: "koko",       password: "guru123", aktif: true },
+  { nip: "19970720241166", nama: "Kukuh Romadhoni Faturrohman, S.Pd.",     jabatan: "Guru",      kelas: "", username: "kukuh",      password: "guru123", aktif: true },
+  { nip: "20030820232143", nama: "Miftah Ilmi",                            jabatan: "Guru",      kelas: "", username: "miftah",     password: "guru123", aktif: true },
+  { nip: "19990720241175", nama: "Muhammad Harits, S.Pd.",                 jabatan: "Guru",      kelas: "", username: "harits",     password: "guru123", aktif: true },
+  { nip: "19950620251225", nama: "Muhammad Qonit Abdullah",                jabatan: "Guru",      kelas: "", username: "qonit",      password: "guru123", aktif: true },
+  { nip: "",               nama: "Muhammad Zidane Ar Rizqi, S.Pd.",        jabatan: "Guru",      kelas: "", username: "zidane",     password: "guru123", aktif: true },
+  { nip: "19980720232124", nama: "Najiyyatun Nuhyah, S.Sos",               jabatan: "Guru",      kelas: "", username: "najiyyatun", password: "guru123", aktif: true },
+  { nip: "19870920241206", nama: "Nana Supriyatna, S.Pd,",                 jabatan: "Guru",      kelas: "", username: "nana",       password: "guru123", aktif: true },
+  { nip: "20000720232137", nama: "Naya Alifa Salsabila, S.Pd",             jabatan: "Guru",      kelas: "", username: "naya",       password: "guru123", aktif: true },
+  { nip: "19840720132039", nama: "Nur Anisah",                             jabatan: "Guru",      kelas: "", username: "nuranisah",  password: "guru123", aktif: true },
+  { nip: "19930720241173", nama: "Nur Muhammad Iskandar, S.Si., M.Pd.",    jabatan: "Guru",      kelas: "", username: "iskandar",   password: "guru123", aktif: true },
+  { nip: "19900720212057", nama: "Ria Setiawati, A.Md",                    jabatan: "Guru",      kelas: "", username: "ria",        password: "guru123", aktif: true },
+  { nip: "19980820221109", nama: "Riyanto Pratama, S.Pd",                  jabatan: "Guru",      kelas: "", username: "riyanto",    password: "guru123", aktif: true },
+  { nip: "19740820071012", nama: "Wahidin, S.Pd.I",                        jabatan: "Guru",      kelas: "", username: "wahidin",    password: "guru123", aktif: true },
+  { nip: "19930720172053", nama: "Yulis Savina, S.Pd",                     jabatan: "Guru",      kelas: "", username: "yulis",      password: "guru123", aktif: true },
+  { nip: "19830820081015", nama: "Arie Trida Siswana, S.Si",               jabatan: "Guru",      kelas: "", username: "arie",       password: "guru123", aktif: true }, // Guru / BPP
+  { nip: "20000820221107", nama: "Iik Muhammad Taufik, S.Pd.",             jabatan: "Kesiswaan", kelas: "", username: "iik",        password: "guru123", aktif: true }, // Guru / Waka Kesiswaan
+  { nip: "19970620212080", nama: "Dwi Ratna Wulan, S.Pd.",                 jabatan: "Guru",      kelas: "", username: "dwiratna",   password: "guru123", aktif: true }, // Guru / Waka Kurikulum
+  { nip: "19960720231146", nama: "Faisal Arif, S.Hum.",                   jabatan: "Guru",      kelas: "", username: "faisal",     password: "guru123", aktif: true }, // Guru / Waka Sarpras
+  { nip: "20010120252208", nama: "Nur Rohmatul Maula, S.Pd.",              jabatan: "Guru BK",   kelas: "", username: "rohmatul",   password: "guru123", aktif: true },
+  { nip: "19980620212074", nama: "Riani Rizki Astuti, S.Sos",              jabatan: "Guru BK",   kelas: "", username: "riani",      password: "guru123", aktif: true },
+];
+
 function ModulGuru({ user, guru, setGuru, users, setUsers }) {
   const [modal, setModal] = useState(false);
   const [edit, setEdit] = useState(null);
-  const [form, setForm] = useState({ nip:"", nama:"", jabatan:"Guru", kelas:"", username:"", password:"", aktif:true });
+  const [importing, setImporting] = useState(false);
 
-  if (!["admin"].includes(user.role)) return <div style={{ padding: 40, textAlign: "center", color: C.gray600 }}>Anda tidak memiliki akses ke halaman ini.</div>;
+  const [form, setForm] = useState({
+    nip: "", nama: "", jabatan: "Guru", kelas: "",
+    username: "", password: "", aktif: true,
+  });
 
-  const openAdd = () => { setEdit(null); setForm({ nip:"", nama:"", jabatan:"Guru", kelas:"", username:"", password:"", aktif:true }); setModal(true); };
-  const openEdit = (g) => { setEdit(g.id); setForm({ ...g }); setModal(true); };
-  const handleSave = () => {
-    if (edit) {
-      setGuru(prev => prev.map(g => g.id === edit ? { ...form, id: edit } : g));
-      setUsers(prev => prev.map(u => u.username === form.username ? { ...u, name: form.nama, password: form.password } : u));
-    } else {
-      const newId = Date.now();
-      setGuru(prev => [...prev, { ...form, id: newId }]);
-      setUsers(prev => [...prev, { id: newId, username: form.username, password: form.password, role: "walas", name: form.nama }]);
-    }
-    setModal(false);
+  if (!["admin"].includes(user.role)) {
+    return (
+      <div style={{ padding: 40, textAlign: "center", color: C.gray600 }}>
+        Anda tidak memiliki akses ke halaman ini.
+      </div>
+    );
+  }
+
+  const openAdd = () => {
+    setEdit(null);
+    setForm({ nip: "", nama: "", jabatan: "Guru", kelas: "", username: "", password: "", aktif: true });
+    setModal(true);
   };
 
+  const openEdit = (g) => {
+    setEdit(g.id);
+    setForm({ ...g, aktif: g.status === "aktif" });
+    setModal(true);
+  };
+
+  // Simpan data guru (tambah baru ATAU update yang sudah ada) ke tabel "guru"
+  const handleSave = async () => {
+    if (!form.nama.trim()) {
+      alert("Nama guru harus diisi");
+      return;
+    }
+    if (!form.username.trim()) {
+      alert("Username login harus diisi");
+      return;
+    }
+
+    const payload = {
+      nip: form.nip,
+      nama: form.nama,
+      jabatan: form.jabatan,
+      kelas: form.jabatan === "Wali Kelas" ? form.kelas : "",
+      username: form.username,
+      password: form.password,
+      status: form.aktif ? "aktif" : "non-aktif",
+    };
+
+    if (edit) {
+      // mode edit -> update baris yang sudah ada
+      const { data, error } = await supabase
+        .from("guru")
+        .update(payload)
+        .eq("id", edit)
+        .select();
+
+      if (error) {
+        console.error("ERROR UPDATE:", error);
+        alert("Gagal memperbarui data guru: " + error.message);
+        return;
+      }
+
+      setGuru((prev) => prev.map((g) => (g.id === edit ? data[0] : g)));
+      alert("Data guru berhasil diperbarui");
+    } else {
+      // mode tambah baru
+      const { data, error } = await supabase
+        .from("guru")
+        .insert([payload])
+        .select();
+
+      if (error) {
+        console.error("ERROR INSERT:", error);
+        alert("Gagal menyimpan data guru: " + error.message);
+        return;
+      }
+
+      setGuru((prev) => [...prev, ...data]);
+      alert("Data guru berhasil disimpan");
+    }
+
+    setModal(false);
+    setEdit(null);
+    setForm({ nip: "", nama: "", jabatan: "Guru", kelas: "", username: "", password: "", aktif: true });
+  };
+
+  const handleDelete = async (id) => {
+    const yakin = window.confirm("Yakin ingin menghapus guru ini?");
+    if (!yakin) return;
+
+    const { data, error } = await supabase
+      .from("guru")
+      .delete()
+      .eq("id", id)
+      .select();
+
+    if (error) {
+      console.error("ERROR DELETE:", error);
+      alert(error.message);
+      return;
+    }
+
+    setGuru((prev) => prev.filter((g) => g.id !== id));
+    alert("Data guru berhasil dihapus");
+  };
+
+  // Impor sekali klik: memasukkan semua data dari DATA_GURU_AWAL ke Supabase
+  const handleImportAwal = async () => {
+    const yakin = window.confirm(
+      `Impor ${DATA_GURU_AWAL.length} data guru dari file Excel ke sistem?`
+    );
+    if (!yakin) return;
+
+    setImporting(true);
+
+    const payload = DATA_GURU_AWAL.map((g) => ({
+      nip: g.nip,
+      nama: g.nama,
+      jabatan: g.jabatan,
+      kelas: g.kelas,
+      username: g.username,
+      password: g.password,
+      status: g.aktif ? "aktif" : "non-aktif",
+    }));
+
+    const { data, error } = await supabase.from("guru").insert(payload).select();
+
+    setImporting(false);
+
+    if (error) {
+      console.error("ERROR IMPORT:", error);
+      alert("Gagal mengimpor data guru: " + error.message);
+      return;
+    }
+
+    setGuru((prev) => [...prev, ...data]);
+    alert(`Berhasil mengimpor ${data.length} data guru`);
+  };
+const handleImportExcel = async (e) => {
+  try {
+    const file = e.target.files[0];
+
+    if (!file) return;
+
+    const data = await file.arrayBuffer();
+
+    const workbook = XLSX.read(data);
+
+    const sheetName = workbook.SheetNames[0];
+
+    const sheet = workbook.Sheets[sheetName];
+
+    const rows = XLSX.utils.sheet_to_json(sheet);
+
+    if (!rows.length) {
+      alert("File Excel kosong");
+      return;
+    }
+
+    const payload = rows.map((row) => ({
+      nip: row.nip || "",
+      nama: row.nama || "",
+      jabatan: row.jabatan || "Guru",
+      kelas: row.kelas || "",
+      username: row.username || "",
+      password: row.password || "guru123",
+      status: row.status || "aktif",
+    }));
+
+    const { data: inserted, error } = await supabase
+      .from("guru")
+      .insert(payload)
+      .select();
+
+    if (error) {
+      console.error(error);
+      alert(error.message);
+      return;
+    }
+
+    setGuru((prev) => [...prev, ...inserted]);
+
+    alert(
+      `${inserted.length} data guru berhasil diimport`
+    );
+  } catch (err) {
+    console.error(err);
+    alert("Gagal membaca file Excel");
+  }
+};
+const handleDeleteAll = async () => {
+  const yakin = window.confirm(
+    "Yakin ingin menghapus SEMUA data guru?"
+  );
+
+  if (!yakin) return;
+
+  const konfirmasi = window.prompt(
+    'Ketik "HAPUS" untuk melanjutkan'
+  );
+
+  if (konfirmasi !== "HAPUS") {
+    alert("Penghapusan dibatalkan");
+    return;
+  }
+
+  const { error } = await supabase
+    .from("guru")
+    .delete()
+    .neq("id", 0);
+
+  if (error) {
+    console.error(error);
+    alert(error.message);
+    return;
+  }
+
+  setGuru([]);
+
+  alert("Semua data guru berhasil dihapus");
+};
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
@@ -1897,45 +3907,92 @@ function ModulGuru({ user, guru, setGuru, users, setUsers }) {
           <div style={{ fontWeight: 800, fontSize: 20, color: C.emeraldDark }}>👨‍🏫 Data Guru & Akun Login</div>
           <div style={{ color: C.gray600, fontSize: 13 }}>Kelola data guru dan akun login sistem</div>
         </div>
-        <Btn onClick={openAdd}>+ Tambah Guru</Btn>
-      </div>
+        <div style={{ display: "flex", gap: 10 }}>
+  <Btn
+    variant="ghost"
+    onClick={handleDeleteAll}
+    disabled={guru.length === 0}
+  >
+    🗑️ Hapus Semua
+  </Btn>
+
+  <input
+    type="file"
+    accept=".xlsx,.xls"
+    id="importGuru"
+    style={{ display: "none" }}
+    onChange={handleImportExcel}
+  />
+
+  <Btn
+    variant="ghost"
+    onClick={() => document.getElementById("importGuru").click()}
+  >
+    📥 Import Excel
+  </Btn>
+
+  <Btn onClick={openAdd}>
+    + Tambah Guru
+  </Btn>
+</div>      </div>
 
       <Card>
         <Table
           cols={["NIP", "Nama", "Jabatan", "Kelas", "Username", "Status", "Aksi"]}
           rows={guru}
-          renderRow={(g) => <>
-            <td style={{ padding: "10px 12px", fontSize: 12 }}>{g.nip}</td>
-            <td style={{ padding: "10px 12px", fontWeight: 600 }}>{g.nama}</td>
-            <td style={{ padding: "10px 12px", fontSize: 12 }}>{g.jabatan}</td>
-            <td style={{ padding: "10px 12px" }}>{g.kelas ? <Badge>{g.kelas}</Badge> : "-"}</td>
-            <td style={{ padding: "10px 12px", fontSize: 12 }}>{g.username}</td>
-            <td style={{ padding: "10px 12px" }}><Badge color={g.aktif ? C.emeraldDark : C.red} bg={g.aktif ? C.emeraldLight : C.redLight}>{g.aktif ? "Aktif" : "Non-Aktif"}</Badge></td>
-            <td style={{ padding: "10px 12px" }}>
-              <Btn small variant="ghost" onClick={() => openEdit(g)} style={{ marginRight: 6 }}>✏️ Edit</Btn>
-            </td>
-          </>}
+          renderRow={(g) => (
+            <>
+              <td>{g.nip || "-"}</td>
+              <td>{g.nama}</td>
+              <td>{g.jabatan}</td>
+              <td>{g.kelas || "-"}</td>
+              <td>{g.username}</td>
+              <td>
+                <Badge>{g.status === "aktif" ? "Aktif" : "Non-Aktif"}</Badge>
+              </td>
+              <td>
+                <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+                  <Btn small variant="ghost" onClick={() => openEdit(g)}>
+                    ✏️ Edit
+                  </Btn>
+                  <Btn small onClick={() => handleDelete(g.id)}>
+                    🗑️ Hapus
+                  </Btn>
+                </div>
+              </td>
+            </>
+          )}
         />
       </Card>
 
       <Modal open={modal} onClose={() => setModal(false)} title={edit ? "Edit Data Guru" : "Tambah Guru Baru"}>
-        <Input label="NIP" value={form.nip} onChange={e => setForm(f => ({ ...f, nip: e.target.value }))} />
-        <Input label="Nama Lengkap & Gelar" value={form.nama} onChange={e => setForm(f => ({ ...f, nama: e.target.value }))} />
-        <Select label="Jabatan" value={form.jabatan} onChange={e => setForm(f => ({ ...f, jabatan: e.target.value }))} options={[
-          { value: "Guru", label: "Guru" },
-          { value: "Wali Kelas", label: "Wali Kelas" },
-          { value: "Guru BK", label: "Guru BK" },
-          { value: "Guru Qiroati", label: "Guru Qiroati" },
-          { value: "PJ Bilingual", label: "PJ Bilingual" },
-          { value: "Kesiswaan", label: "Kesiswaan" },
-        ]} />
+        <Input label="NIP" value={form.nip} onChange={(e) => setForm((f) => ({ ...f, nip: e.target.value }))} />
+        <Input label="Nama Lengkap & Gelar" value={form.nama} onChange={(e) => setForm((f) => ({ ...f, nama: e.target.value }))} />
+        <Select
+          label="Jabatan"
+          value={form.jabatan}
+          onChange={(e) => setForm((f) => ({ ...f, jabatan: e.target.value }))}
+          options={[
+            { value: "Guru", label: "Guru" },
+            { value: "Wali Kelas", label: "Wali Kelas" },
+            { value: "Guru BK", label: "Guru BK" },
+            { value: "Guru Qiroati", label: "Guru Qiroati" },
+            { value: "PJ Bilingual", label: "PJ Bilingual" },
+            { value: "Kesiswaan", label: "Kesiswaan" },
+          ]}
+        />
         {form.jabatan === "Wali Kelas" && (
-          <Select label="Kelas" value={form.kelas} onChange={e => setForm(f => ({ ...f, kelas: e.target.value }))} options={KELAS_LIST.map(k => ({ value: k, label: k }))} />
+          <Select
+            label="Kelas"
+            value={form.kelas}
+            onChange={(e) => setForm((f) => ({ ...f, kelas: e.target.value }))}
+            options={KELAS_LIST.map((k) => ({ value: k, label: k }))}
+          />
         )}
-        <Input label="Username Login" value={form.username} onChange={e => setForm(f => ({ ...f, username: e.target.value }))} />
-        <Input label="Password" type="password" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} />
+        <Input label="Username Login" value={form.username} onChange={(e) => setForm((f) => ({ ...f, username: e.target.value }))} />
+        <Input label="Password" type="password" value={form.password} onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))} />
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
-          <input type="checkbox" id="aktifGuru" checked={form.aktif} onChange={e => setForm(f => ({ ...f, aktif: e.target.checked }))} />
+          <input type="checkbox" id="aktifGuru" checked={form.aktif} onChange={(e) => setForm((f) => ({ ...f, aktif: e.target.checked }))} />
           <label htmlFor="aktifGuru" style={{ fontSize: 13 }}>Akun Aktif</label>
         </div>
         <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
@@ -1950,8 +4007,202 @@ function ModulGuru({ user, guru, setGuru, users, setUsers }) {
 // ===================== MODUL LAPORAN =====================
 function ModulLaporan({ user, siswa, pelanggaran, apresiasi, hafalan, vocab, catatan, absensi }) {
   const [tab, setTab] = useState("pelanggaran");
+const exportExcelLengkap = () => {
+  const wb = XLSX.utils.book_new();
 
-  const tabs = [
+  // Sheet Rekap Siswa
+  const rekapSiswa = siswa.map((s) => ({
+    NISN: s.nisn,
+    Nama: s.nama,
+    Kelas: s.kelas
+  }));
+
+  const wsRekap = XLSX.utils.json_to_sheet(rekapSiswa);
+  XLSX.utils.book_append_sheet(wb, wsRekap, "Rekap Siswa");
+
+  // Sheet Pelanggaran
+  const wsPelanggaran = XLSX.utils.json_to_sheet(
+    pelanggaran.map((p) => ({
+      Tanggal: p.tanggal,
+      Nama: p.nama,
+      Kelas: p.kelas,
+      Pelanggaran: p.pelanggaran,
+      Poin: p.poin
+    }))
+  );
+
+  XLSX.utils.book_append_sheet(
+    wb,
+    wsPelanggaran,
+    "Pelanggaran"
+  );
+
+  // Sheet Catatan
+  const wsCatatan = XLSX.utils.json_to_sheet(
+    catatan.map((c) => ({
+      Tanggal: c.tanggal,
+      Nama: c.nama,
+      Kelas: c.kelas,
+      Catatan: c.catatan,
+      Guru: c.guru
+    }))
+  );
+
+  XLSX.utils.book_append_sheet(
+    wb,
+    wsCatatan,
+    "Catatan"
+  );
+
+  // Sheet Absensi
+  const wsAbsensi = XLSX.utils.json_to_sheet(absensi);
+
+  XLSX.utils.book_append_sheet(
+    wb,
+    wsAbsensi,
+    "Absensi"
+  );
+
+  // Sheet Hafalan
+  const wsHafalan = XLSX.utils.json_to_sheet(hafalan);
+
+  XLSX.utils.book_append_sheet(
+    wb,
+    wsHafalan,
+    "Hafalan"
+  );
+
+  // Sheet Vocab
+  const wsVocab = XLSX.utils.json_to_sheet(vocab);
+
+  XLSX.utils.book_append_sheet(
+    wb,
+    wsVocab,
+    "Vocab"
+  );
+
+  XLSX.writeFile(
+    wb,
+    `Laporan_Sekolah_${new Date()
+      .toISOString()
+      .split("T")[0]}.xlsx`
+  );
+};
+
+const downloadRekap = () => {
+  const rows = siswa.map((s) => {
+    const dataPelanggaran = pelanggaran.filter(
+      (p) => p.nisn === s.nisn
+    );
+
+    const dataCatatan = catatan.filter(
+      (c) => c.nisn === s.nisn
+    );
+
+    const dataHafalan = hafalan.filter(
+      (h) => h.nisn === s.nisn
+    );
+
+    const dataVocab = vocab.filter(
+      (v) => v.nisn === s.nisn
+    );
+
+    const dataAbsensi = absensi.filter(
+      (a) => a.nisn === s.nisn
+    );
+
+    const totalPoin = dataPelanggaran.reduce(
+      (sum, p) => sum + Number(p.poin || 0),
+      0
+    );
+
+    const totalVocab = dataVocab.reduce(
+      (sum, v) => sum + Number(v.jumlah || 0),
+      0
+    );
+
+    const hadir = dataAbsensi.filter(
+      (a) => a.status === "Hadir"
+    ).length;
+
+    const sakit = dataAbsensi.filter(
+      (a) => a.status === "Sakit"
+    ).length;
+
+    const izin = dataAbsensi.filter(
+      (a) => a.status === "Izin"
+    ).length;
+
+    const alfa = dataAbsensi.filter(
+      (a) => a.status === "Alfa"
+    ).length;
+
+    const sp = getSP(totalPoin);
+
+    return [
+      s.nisn,
+      s.nama,
+      s.kelas,
+      dataPelanggaran.length,
+      totalPoin,
+      sp.level,
+      dataCatatan.length,
+      dataHafalan.length,
+      totalVocab,
+      hadir,
+      sakit,
+      izin,
+      alfa
+    ];
+  });
+
+  const csv = [
+    [
+      "NISN",
+      "Nama",
+      "Kelas",
+      "Jumlah Pelanggaran",
+      "Total Poin",
+      "Status SP",
+      "Jumlah Catatan",
+      "Jumlah Hafalan",
+      "Total Vocab",
+      "Hadir",
+      "Sakit",
+      "Izin",
+      "Alfa"
+    ],
+    ...rows
+  ]
+    .map((row) =>
+      row.map((v) => `"${v}"`).join(";")
+    )
+    .join("\n");
+
+  const blob = new Blob(
+    ["\ufeff" + csv],
+    {
+      type: "text/csv;charset=utf-8;"
+    }
+  );
+
+  const url = URL.createObjectURL(blob);
+
+  const link = document.createElement("a");
+
+  link.href = url;
+  link.download =
+    `Rekap_Siswa_${new Date()
+      .toISOString()
+      .split("T")[0]}.csv`;
+
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+
+  URL.revokeObjectURL(url);
+};
+ const tabs = [
     { key: "pelanggaran", label: "⚠️ Pelanggaran" },
     { key: "hafalan", label: "📖 Hafalan" },
     { key: "vocab", label: "🔤 Vocab" },
@@ -1968,8 +4219,51 @@ function ModulLaporan({ user, siswa, pelanggaran, apresiasi, hafalan, vocab, cat
 
   return (
     <div>
-      <div style={{ fontWeight: 800, fontSize: 20, color: C.emeraldDark, marginBottom: 20 }}>📊 Laporan & Rekap</div>
+      <div style={{ display: "flex", gap: 10 }}>
+  <Btn onClick={exportExcelLengkap}>
+    📥 Excel Lengkap
+  </Btn>
 
+  <Btn
+    variant="ghost"
+    onClick={downloadRekap}
+  >
+    📄 CSV Rekap
+  </Btn>
+</div>
+<div
+  style={{
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 20,
+    flexWrap: "wrap",
+    gap: 10
+  }}
+>
+  <div
+    style={{
+      fontWeight: 800,
+      fontSize: 20,
+      color: C.emeraldDark
+    }}
+  >
+    📊 Laporan & Rekap
+  </div>
+
+  <div style={{ display: "flex", gap: 10 }}>
+    <Btn onClick={exportExcelLengkap}>
+      📥 Excel Lengkap
+    </Btn>
+
+    <Btn
+      variant="ghost"
+      onClick={downloadRekap}
+    >
+      📄 CSV Rekap
+    </Btn>
+  </div>
+</div>
       {/* Tab nav */}
       <div style={{ display: "flex", gap: 4, marginBottom: 20, flexWrap: "wrap" }}>
         {tabs.map(t => (
@@ -1989,21 +4283,103 @@ function ModulLaporan({ user, siswa, pelanggaran, apresiasi, hafalan, vocab, cat
             <StatCard icon="🔴" label="SP3 / Kritis (270)" value={spSummary.filter(s => s.poin >= 270).length} color={C.red} />
           </div>
           <Card>
-            <div style={{ fontWeight: 700, color: C.emeraldDark, marginBottom: 14 }}>Rekap SP Semua Siswa (dengan Poin &gt; 50)</div>
-            <Table
-              cols={["Nama", "Kelas", "Total Poin", "Status SP", "Tindak Lanjut"]}
-              rows={spSummary.filter(s => s.poin > 0).sort((a, b) => b.poin - a.poin)}
-              renderRow={(s) => <>
-                <td style={{ padding: "10px 12px", fontWeight: 600 }}>{s.nama}</td>
-                <td style={{ padding: "10px 12px" }}><Badge>{s.kelas}</Badge></td>
-                <td style={{ padding: "10px 12px", fontWeight: 700, color: s.poin >= 100 ? C.red : C.gold }}>{s.poin}</td>
-                <td style={{ padding: "10px 12px" }}><span style={{ background: s.sp.bg, color: s.sp.color, padding: "2px 10px", borderRadius: 99, fontSize: 12, fontWeight: 600 }}>{s.sp.level}</span></td>
-                <td style={{ padding: "10px 12px", fontSize: 12 }}>
-                  {s.poin >= 300 ? "Kesiswaan & Orang Tua" : s.poin >= 200 ? "Kesiswaan" : s.poin >= 100 ? "Guru BK" : "Wali Kelas"}
-                </td>
-              </>}
-            />
-          </Card>
+  <div
+    style={{
+      fontWeight: 700,
+      color: C.emeraldDark,
+      marginBottom: 14
+    }}
+  >
+    📋 Rekap Pelanggaran Semua Siswa
+  </div>
+
+  <Table
+    cols={[
+      "Nama",
+      "Kelas",
+      "Jumlah Pelanggaran",
+      "Total Poin",
+      "Status",
+      "Tindak Lanjut"
+    ]}
+    rows={Object.values(
+  pelanggaran.reduce((acc, p) => {
+    const key = p.nisn || p.nama;
+
+    if (!acc[key]) {
+      acc[key] = {
+        nisn: p.nisn,
+        nama: p.nama || "-",
+        kelas: p.kelas || "-",
+        jumlah: 0,
+        poin: 0
+      };
+    }
+
+    acc[key].jumlah += 1;
+    acc[key].poin += Number(p.poin || 0);
+
+    return acc;
+  }, {})
+)
+.map((s) => ({
+  ...s,
+  sp: getSP(s.poin)
+}))
+.sort((a, b) => b.poin - a.poin)}
+    renderRow={(s) => (
+      <>
+        <td style={{ padding: "10px 12px", fontWeight: 600 }}>
+          {s.nama}
+        </td>
+
+        <td style={{ padding: "10px 12px" }}>
+          <Badge>
+            {s.kelas}
+          </Badge>
+        </td>
+
+        <td style={{ padding: "10px 12px" }}>
+          {s.jumlah}
+        </td>
+
+        <td
+          style={{
+            padding: "10px 12px",
+            fontWeight: 700,
+            color:
+              s.poin >= 180
+                ? C.red
+                : s.poin >= 90
+                ? C.gold
+                : C.gray700
+          }}
+        >
+          {s.poin}
+        </td>
+
+        <td style={{ padding: "10px 12px" }}>
+          <span
+            style={{
+              background: s.sp.bg,
+              color: s.sp.color,
+              padding: "3px 10px",
+              borderRadius: 99,
+              fontSize: 12,
+              fontWeight: 700
+            }}
+          >
+            {s.sp.level}
+          </span>
+        </td>
+
+        <td style={{ padding: "10px 12px" }}>
+          {s.sp.pj || "-"}
+        </td>
+      </>
+    )}
+  />
+</Card>
         </div>
       )}
 
@@ -2098,43 +4474,165 @@ function ModulLaporan({ user, siswa, pelanggaran, apresiasi, hafalan, vocab, cat
       )}
 
       {tab === "rekap" && (
-        <Card>
-          <div style={{ fontWeight: 700, color: C.emeraldDark, marginBottom: 14 }}>📋 Rekap Lengkap Per Siswa</div>
-          <Table
-            cols={["Nama", "Kelas", "Hafalan", "Vocab", "Poin Pelanggaran", "Kehadiran", "Status"]}
-            rows={siswa}
-            renderRow={(s) => {
-              const poin = getAkumulasiPoin(s.nisn, pelanggaran, apresiasi);
-              const sp = getSP(poin);
-              return <>
-                <td style={{ padding: "10px 12px" }}>
-  {/* 1. Menampilkan Status Pelanggaran (misal: Pelanggaran Berat SP1) */}
-  <span style={{ 
-    color: sp.color, 
-    backgroundColor: sp.bg, 
-    padding: "4px 10px", 
-    borderRadius: "6px", 
-    fontWeight: "bold",
-    fontSize: "13px",
-    display: "inline-block"
-  }}>
-    {sp.level}
-  </span>
-  
-  {/* 2. Menampilkan Siapa Penanggung Jawabnya */}
-  <div style={{ fontSize: "12px", color: "#374151", marginTop: "6px" }}>
-    <strong>PJ:</strong> {sp.pj}
-  </div>
-  
-  {/* 3. Menampilkan Alur Tindak Lanjut Sekolah */}
-  <div style={{ fontSize: "11px", color: "#6b7280", marginTop: "2px", maxWidth: "250px", lineHeight: "1.3" }}>
-    <strong>Tindak Lanjut:</strong> {sp.tindakLanjut}
-  </div>
-</td>
- </>;
-    }}
-          />
-        </Card>
+  <Card>
+    <div
+      style={{
+        fontWeight: 700,
+        color: C.emeraldDark,
+        marginBottom: 14
+      }}
+    >
+      📋 Rekap Lengkap Per Siswa
+    </div>
+
+    <Table
+      cols={[
+        "Nama",
+        "Kelas",
+        "Hafalan",
+        "Vocab",
+        "Poin",
+        "Kehadiran",
+        "Status SP"
+      ]}
+      rows={siswa}
+      renderRow={(s) => {
+        const poin = getAkumulasiPoin(
+          s.nisn,
+          pelanggaran,
+          apresiasi
+        );
+
+        const sp = getSP(poin);
+
+        const totalHafalan = hafalan.filter(
+          h =>
+            h.nisn === s.nisn &&
+            h.status === "Lulus"
+        ).length;
+
+        const totalVocab = vocab
+          .filter(v => v.nisn === s.nisn)
+          .reduce(
+            (sum, v) =>
+              sum + Number(v.jumlah || 0),
+            0
+          );
+
+        const dataAbsensi = absensi.filter(
+          a => a.nisn === s.nisn
+        );
+
+        const hadir = dataAbsensi.filter(
+          a => a.status === "Hadir"
+        ).length;
+
+        const persenHadir =
+          dataAbsensi.length > 0
+            ? Math.round(
+                (hadir /
+                  dataAbsensi.length) *
+                  100
+              )
+            : 0;
+
+        return (
+          <>
+            <td
+              style={{
+                padding: "10px 12px",
+                fontWeight: 600
+              }}
+            >
+              {s.nama}
+            </td>
+
+            <td style={{ padding: "10px 12px" }}>
+              <Badge>{s.kelas}</Badge>
+            </td>
+
+            <td
+              style={{
+                padding: "10px 12px",
+                textAlign: "center"
+              }}
+            >
+              {totalHafalan}
+            </td>
+
+            <td
+              style={{
+                padding: "10px 12px",
+                textAlign: "center"
+              }}
+            >
+              {totalVocab}
+            </td>
+
+            <td
+              style={{
+                padding: "10px 12px",
+                fontWeight: 700,
+                color:
+                  poin >= 180
+                    ? C.red
+                    : poin >= 90
+                    ? C.gold
+                    : C.gray700
+              }}
+            >
+              {poin}
+            </td>
+
+            <td style={{ padding: "10px 12px" }}>
+              <div
+                style={{
+                  fontWeight: 600
+                }}
+              >
+                {persenHadir}%
+              </div>
+
+              <div
+                style={{
+                  fontSize: 11,
+                  color: C.gray500
+                }}
+              >
+                {hadir}/{dataAbsensi.length}
+              </div>
+            </td>
+
+            <td style={{ padding: "10px 12px" }}>
+              <div
+                style={{
+                  display: "inline-block",
+                  padding: "4px 10px",
+                  borderRadius: 99,
+                  background: sp.bg,
+                  color: sp.color,
+                  fontWeight: 700,
+                  fontSize: 12
+                }}
+              >
+                {sp.level}
+              </div>
+
+              <div
+                style={{
+                  fontSize: 11,
+                  marginTop: 4,
+                  color: C.gray600
+                }}
+              >
+                PJ: {sp.pj}
+              </div>
+            </td>
+          </>
+        );
+      }}
+    />
+  </Card>
       )}
     </div>
   );
