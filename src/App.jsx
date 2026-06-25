@@ -1262,10 +1262,10 @@ const absensiAnak = absensi
   <div
   style={{
     display: "grid",
-    gridTemplateColumns:
-      "repeat(auto-fit,minmax(300px,1fr))",
-    gap: 20,
-    marginBottom: 20
+    gridTemplateColumns: isMobile
+      ? "1fr"
+      : "1fr 1fr",
+    gap: "0 16px"
   }}
 >
   </div>
@@ -1410,7 +1410,27 @@ const absensiAnak = absensi
 }
 
 // ===================== MODUL SISWA =====================
+function useIsMobile() {
+  const [isMobile, setIsMobile] = React.useState(
+    window.innerWidth < 768
+  );
+
+  React.useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    window.addEventListener("resize", handleResize);
+
+    return () =>
+      window.removeEventListener("resize", handleResize);
+  }, []);
+
+  return isMobile;
+}
+
 function ModulSiswa({ user, siswa, setSiswa }) {
+const isMobile = useIsMobile();
   const [search, setSearch] = useState("");
   const [kelasFilter, setKelasFilter] = useState("");
   const [modal, setModal] = useState(false);
@@ -1533,8 +1553,27 @@ alert(JSON.stringify(error));
       </div>
 
       <Card style={{ marginBottom: 20 }}>
-        <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="🔍 Cari nama / NISN..." style={{ flex: 1, minWidth: 200, border: `1.5px solid ${C.gray200}`, borderRadius: 8, padding: "8px 12px", fontSize: 14, outline: "none" }} />
+        <div
+  style={{
+    display: "flex",
+    flexDirection: isMobile ? "column" : "row",
+    gap: 12
+  }}
+>
+          <input
+  value={search}
+  onChange={e => setSearch(e.target.value)}
+  placeholder="🔍 Cari nama / NISN..."
+  style={{
+    flex: 1,
+    minWidth: isMobile ? "100%" : 200,
+    border: `1.5px solid ${C.gray200}`,
+    borderRadius: 8,
+    padding: "8px 12px",
+    fontSize: 14,
+    outline: "none"
+  }}
+/>
           <select value={kelasFilter} onChange={e => setKelasFilter(e.target.value)} style={{ border: `1.5px solid ${C.gray200}`, borderRadius: 8, padding: "8px 12px", fontSize: 14, outline: "none" }}>
             <option value="">Semua Kelas</option>
             {KELAS_LIST.map(k => <option key={k} value={k}>{k}</option>)}
@@ -1543,26 +1582,143 @@ alert(JSON.stringify(error));
       </Card>
 
       <Card>
-        <Table
-          cols={["NISN", "Nama", "Kelas", "JK", "No. WA Ortu", "Status", "Aksi"]}
-          rows={filtered}
-          renderRow={(s) => <>
-            <td style={{ padding: "10px 12px" }}>{s.nisn}</td>
-            <td style={{ padding: "10px 12px", fontWeight: 600 }}>{s.nama}</td>
-            <td style={{ padding: "10px 12px" }}><Badge>{s.kelas}</Badge></td>
-            <td style={{ padding: "10px 12px" }}>{s.jk === "L" ? "👦 L" : "👧 P"}</td>
-            <td style={{ padding: "10px 12px" }}>{s.noWa}</td>
-            <td style={{ padding: "10px 12px" }}><Badge color={s.aktif ? C.emeraldDark : C.red} bg={s.aktif ? C.emeraldLight : C.redLight}>{s.aktif ? "Aktif" : "Tidak Aktif"}</Badge></td>
-            <td style={{ padding: "10px 12px" }}>
-              {canEdit && <>
-                <Btn small variant="ghost" onClick={() => openEdit(s)} style={{ marginRight: 6 }}>✏️</Btn>
-                <Btn small variant="danger" onClick={() => handleDelete(s.nisn)}>🗑️</Btn>
-              </>}
-            </td>
-          </>}
-        />
-      </Card>
 
+{!isMobile ? (
+
+<Table
+  cols={[
+    "NISN",
+    "Nama",
+    "Kelas",
+    "JK",
+    "No. WA Ortu",
+    "Status",
+    "Aksi"
+  ]}
+  rows={filtered}
+  renderRow={(s) => <>
+    <td style={{ padding: "10px 12px" }}>{s.nisn}</td>
+    <td style={{ padding: "10px 12px", fontWeight: 600 }}>
+      {s.nama}
+    </td>
+    <td style={{ padding: "10px 12px" }}>
+      <Badge>{s.kelas}</Badge>
+    </td>
+    <td style={{ padding: "10px 12px" }}>
+      {s.jk === "L" ? "👦 L" : "👧 P"}
+    </td>
+    <td style={{ padding: "10px 12px" }}>
+      {s.noWa}
+    </td>
+    <td style={{ padding: "10px 12px" }}>
+      <Badge
+        color={s.aktif ? C.emeraldDark : C.red}
+        bg={s.aktif ? C.emeraldLight : C.redLight}
+      >
+        {s.aktif ? "Aktif" : "Tidak Aktif"}
+      </Badge>
+    </td>
+    <td style={{ padding: "10px 12px" }}>
+      {canEdit && <>
+        <Btn
+          small
+          variant="ghost"
+          onClick={() => openEdit(s)}
+          style={{ marginRight: 6 }}
+        >
+          ✏️
+        </Btn>
+
+        <Btn
+          small
+          variant="danger"
+          onClick={() => handleDelete(s.nisn)}
+        >
+          🗑️
+        </Btn>
+      </>}
+    </td>
+  </>}
+/>
+
+) : (
+
+<div
+  style={{
+    display: "flex",
+    flexDirection: "column",
+    gap: 12
+  }}
+>
+  {filtered.map((s) => (
+    <Card
+      key={s.nisn}
+      style={{
+        padding: 14,
+        border: `1px solid ${C.gray200}`
+      }}
+    >
+      <div style={{ fontWeight: 700 }}>
+        {s.nama}
+      </div>
+
+      <div style={{ fontSize: 13 }}>
+        NISN: {s.nisn}
+      </div>
+
+      <div style={{ fontSize: 13 }}>
+        Kelas: {s.kelas}
+      </div>
+
+      <div style={{ fontSize: 13 }}>
+        JK: {s.jk === "L" ? "Laki-laki" : "Perempuan"}
+      </div>
+
+      <div style={{ fontSize: 13 }}>
+        WA Ortu: {s.noWa || "-"}
+      </div>
+
+      <div style={{ marginTop: 8 }}>
+        <Badge
+          color={s.aktif ? C.emeraldDark : C.red}
+          bg={s.aktif ? C.emeraldLight : C.redLight}
+        >
+          {s.aktif ? "Aktif" : "Tidak Aktif"}
+        </Badge>
+      </div>
+
+      {canEdit && (
+        <div
+          style={{
+            display: "flex",
+            gap: 8,
+            marginTop: 12
+          }}
+        >
+          <Btn
+            small
+            variant="ghost"
+            onClick={() => openEdit(s)}
+          >
+            ✏️ Edit
+          </Btn>
+
+          <Btn
+            small
+            variant="danger"
+            onClick={() => handleDelete(s.nisn)}
+          >
+            🗑️ Hapus
+          </Btn>
+        </div>
+      )}
+    </Card>
+  ))}
+</div>
+
+)}
+
+</Card>
       <Modal open={modal} onClose={() => setModal(false)} title={edit ? "Edit Data Siswa" : "Tambah Siswa Baru"}>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 16px" }}>
           <Input label="NISN" value={form.nisn} onChange={e => setForm(f => ({ ...f, nisn: e.target.value }))} />
