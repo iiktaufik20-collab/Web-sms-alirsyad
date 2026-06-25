@@ -1524,66 +1524,18 @@ alert(JSON.stringify(error));
 };
   return (
     <div>
-      <div
-  style={{
-    display: "flex",
-    flexDirection: isMobile ? "column" : "row",
-    justifyContent: "space-between",
-    alignItems: isMobile ? "stretch" : "center",
-    gap: 12,
-    marginBottom: 20
-  }}
->
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
         <div>
           <div style={{ fontWeight: 800, fontSize: 20, color: C.emeraldDark }}>👥 Data Siswa</div>
           <div style={{ color: C.gray600, fontSize: 13 }}>Total: {siswa.length} siswa</div>
         </div>
-        {canEdit && (
-  <Btn
-    onClick={openAdd}
-    style={{
-      width: isMobile ? "100%" : "auto"
-    }}
-  >
-    + Tambah Siswa
-  </Btn>
-)}
+        {canEdit && <Btn onClick={openAdd}>+ Tambah Siswa</Btn>}
       </div>
 
       <Card style={{ marginBottom: 20 }}>
-        <div
-  style={{
-    display: "flex",
-    flexDirection: isMobile ? "column" : "row",
-    gap: 12
-  }}
->
-          <input
-  value={search}
-  onChange={e => setSearch(e.target.value)}
-  placeholder="🔍 Cari nama / NISN..."
-  style={{
-    flex: 1,
-    width: isMobile ? "100%" : "auto",
-    minWidth: 0,
-    border: `1.5px solid ${C.gray200}`,
-    borderRadius: 8,
-    padding: "10px 12px",
-    fontSize: 14,
-    outline: "none"
-  }}
-/>
-          <select
-  value={kelasFilter}
-  onChange={e => setKelasFilter(e.target.value)}
-  style={{
-    width: isMobile ? "100%" : "220px",
-    border: `1.5px solid ${C.gray200}`,
-    borderRadius: 8,
-    padding: "10px 12px",
-    fontSize: 14
-  }}
->
+        <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="🔍 Cari nama / NISN..." style={{ flex: 1, minWidth: 200, border: `1.5px solid ${C.gray200}`, borderRadius: 8, padding: "8px 12px", fontSize: 14, outline: "none" }} />
+          <select value={kelasFilter} onChange={e => setKelasFilter(e.target.value)} style={{ border: `1.5px solid ${C.gray200}`, borderRadius: 8, padding: "8px 12px", fontSize: 14, outline: "none" }}>
             <option value="">Semua Kelas</option>
             {KELAS_LIST.map(k => <option key={k} value={k}>{k}</option>)}
           </select>
@@ -1591,29 +1543,28 @@ alert(JSON.stringify(error));
       </Card>
 
       <Card>
-  <div
-    style={{
-      overflowX: "auto",
-      WebkitOverflowScrolling: "touch"
-    }}
-  >
-    <Table
-      cols={["NISN", "Nama", "Kelas", "JK", "No. WA Ortu", "Status", "Aksi"]}
-      rows={filtered}
-      renderRow={(s) => <>
-        ...
-      </>}
-    />
-  </div>
-</Card>
+        <Table
+          cols={["NISN", "Nama", "Kelas", "JK", "No. WA Ortu", "Status", "Aksi"]}
+          rows={filtered}
+          renderRow={(s) => <>
+            <td style={{ padding: "10px 12px" }}>{s.nisn}</td>
+            <td style={{ padding: "10px 12px", fontWeight: 600 }}>{s.nama}</td>
+            <td style={{ padding: "10px 12px" }}><Badge>{s.kelas}</Badge></td>
+            <td style={{ padding: "10px 12px" }}>{s.jk === "L" ? "👦 L" : "👧 P"}</td>
+            <td style={{ padding: "10px 12px" }}>{s.noWa}</td>
+            <td style={{ padding: "10px 12px" }}><Badge color={s.aktif ? C.emeraldDark : C.red} bg={s.aktif ? C.emeraldLight : C.redLight}>{s.aktif ? "Aktif" : "Tidak Aktif"}</Badge></td>
+            <td style={{ padding: "10px 12px" }}>
+              {canEdit && <>
+                <Btn small variant="ghost" onClick={() => openEdit(s)} style={{ marginRight: 6 }}>✏️</Btn>
+                <Btn small variant="danger" onClick={() => handleDelete(s.nisn)}>🗑️</Btn>
+              </>}
+            </td>
+          </>}
+        />
+      </Card>
+
       <Modal open={modal} onClose={() => setModal(false)} title={edit ? "Edit Data Siswa" : "Tambah Siswa Baru"}>
-        <div
-  style={{
-    display: "grid",
-    gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
-    gap: "0 16px"
-  }}
->
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 16px" }}>
           <Input label="NISN" value={form.nisn} onChange={e => setForm(f => ({ ...f, nisn: e.target.value }))} />
           <Input label="NIPD" value={form.nipd} onChange={e => setForm(f => ({ ...f, nipd: e.target.value }))} />
           <div style={{ gridColumn: "1/-1" }}>
@@ -1630,28 +1581,8 @@ alert(JSON.stringify(error));
             <Input label="Alamat" value={form.alamat} onChange={e => setForm(f => ({ ...f, alamat: e.target.value }))} />
           </div>
         </div>
-        <div
-  style={{
-    display: "flex",
-    flexDirection: isMobile ? "column" : "row",
-    gap: 10,
-    justifyContent: "flex-end"
-  }}
->
-          <Btn
-  variant="ghost"
-  onClick={() => setModal(false)}
-  style={{ width: isMobile ? "100%" : "auto" }}
->
-  Batal
-</Btn>
-
-<Btn
-  onClick={handleSave}
-  style={{ width: isMobile ? "100%" : "auto" }}
->
-  Simpan
-</Btn>
+        <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+          <Btn variant="ghost" onClick={() => setModal(false)}>Batal</Btn>
           <Btn onClick={handleSave}>Simpan</Btn>
         </div>
       </Modal>
