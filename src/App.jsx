@@ -1262,10 +1262,10 @@ const absensiAnak = absensi
   <div
   style={{
     display: "grid",
-    gridTemplateColumns: isMobile
-      ? "1fr"
-      : "1fr 1fr",
-    gap: "0 16px"
+    gridTemplateColumns:
+      "repeat(auto-fit,minmax(300px,1fr))",
+    gap: 20,
+    marginBottom: 20
   }}
 >
   </div>
@@ -1410,27 +1410,7 @@ const absensiAnak = absensi
 }
 
 // ===================== MODUL SISWA =====================
-function useIsMobile() {
-  const [isMobile, setIsMobile] = React.useState(
-    window.innerWidth < 768
-  );
-
-  React.useEffect(() => {
-    const handleResize = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-
-    window.addEventListener("resize", handleResize);
-
-    return () =>
-      window.removeEventListener("resize", handleResize);
-  }, []);
-
-  return isMobile;
-}
-
 function ModulSiswa({ user, siswa, setSiswa }) {
-const isMobile = useIsMobile();
   const [search, setSearch] = useState("");
   const [kelasFilter, setKelasFilter] = useState("");
   const [modal, setModal] = useState(false);
@@ -1544,12 +1524,30 @@ alert(JSON.stringify(error));
 };
   return (
     <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+      <div
+  style={{
+    display: "flex",
+    flexDirection: isMobile ? "column" : "row",
+    justifyContent: "space-between",
+    alignItems: isMobile ? "stretch" : "center",
+    gap: 12,
+    marginBottom: 20
+  }}
+>
         <div>
           <div style={{ fontWeight: 800, fontSize: 20, color: C.emeraldDark }}>👥 Data Siswa</div>
           <div style={{ color: C.gray600, fontSize: 13 }}>Total: {siswa.length} siswa</div>
         </div>
-        {canEdit && <Btn onClick={openAdd}>+ Tambah Siswa</Btn>}
+        {canEdit && (
+  <Btn
+    onClick={openAdd}
+    style={{
+      width: isMobile ? "100%" : "auto"
+    }}
+  >
+    + Tambah Siswa
+  </Btn>
+)}
       </div>
 
       <Card style={{ marginBottom: 20 }}>
@@ -1566,15 +1564,26 @@ alert(JSON.stringify(error));
   placeholder="🔍 Cari nama / NISN..."
   style={{
     flex: 1,
-    minWidth: isMobile ? "100%" : 200,
+    width: isMobile ? "100%" : "auto",
+    minWidth: 0,
     border: `1.5px solid ${C.gray200}`,
     borderRadius: 8,
-    padding: "8px 12px",
+    padding: "10px 12px",
     fontSize: 14,
     outline: "none"
   }}
 />
-          <select value={kelasFilter} onChange={e => setKelasFilter(e.target.value)} style={{ border: `1.5px solid ${C.gray200}`, borderRadius: 8, padding: "8px 12px", fontSize: 14, outline: "none" }}>
+          <select
+  value={kelasFilter}
+  onChange={e => setKelasFilter(e.target.value)}
+  style={{
+    width: isMobile ? "100%" : "220px",
+    border: `1.5px solid ${C.gray200}`,
+    borderRadius: 8,
+    padding: "10px 12px",
+    fontSize: 14
+  }}
+>
             <option value="">Semua Kelas</option>
             {KELAS_LIST.map(k => <option key={k} value={k}>{k}</option>)}
           </select>
@@ -1582,145 +1591,29 @@ alert(JSON.stringify(error));
       </Card>
 
       <Card>
-
-{!isMobile ? (
-
-<Table
-  cols={[
-    "NISN",
-    "Nama",
-    "Kelas",
-    "JK",
-    "No. WA Ortu",
-    "Status",
-    "Aksi"
-  ]}
-  rows={filtered}
-  renderRow={(s) => <>
-    <td style={{ padding: "10px 12px" }}>{s.nisn}</td>
-    <td style={{ padding: "10px 12px", fontWeight: 600 }}>
-      {s.nama}
-    </td>
-    <td style={{ padding: "10px 12px" }}>
-      <Badge>{s.kelas}</Badge>
-    </td>
-    <td style={{ padding: "10px 12px" }}>
-      {s.jk === "L" ? "👦 L" : "👧 P"}
-    </td>
-    <td style={{ padding: "10px 12px" }}>
-      {s.noWa}
-    </td>
-    <td style={{ padding: "10px 12px" }}>
-      <Badge
-        color={s.aktif ? C.emeraldDark : C.red}
-        bg={s.aktif ? C.emeraldLight : C.redLight}
-      >
-        {s.aktif ? "Aktif" : "Tidak Aktif"}
-      </Badge>
-    </td>
-    <td style={{ padding: "10px 12px" }}>
-      {canEdit && <>
-        <Btn
-          small
-          variant="ghost"
-          onClick={() => openEdit(s)}
-          style={{ marginRight: 6 }}
-        >
-          ✏️
-        </Btn>
-
-        <Btn
-          small
-          variant="danger"
-          onClick={() => handleDelete(s.nisn)}
-        >
-          🗑️
-        </Btn>
+  <div
+    style={{
+      overflowX: "auto",
+      WebkitOverflowScrolling: "touch"
+    }}
+  >
+    <Table
+      cols={["NISN", "Nama", "Kelas", "JK", "No. WA Ortu", "Status", "Aksi"]}
+      rows={filtered}
+      renderRow={(s) => <>
+        ...
       </>}
-    </td>
-  </>}
-/>
-
-) : (
-
-<div
-  style={{
-    display: "flex",
-    flexDirection: "column",
-    gap: 12
-  }}
->
-  {filtered.map((s) => (
-    <Card
-      key={s.nisn}
-      style={{
-        padding: 14,
-        border: `1px solid ${C.gray200}`
-      }}
-    >
-      <div style={{ fontWeight: 700 }}>
-        {s.nama}
-      </div>
-
-      <div style={{ fontSize: 13 }}>
-        NISN: {s.nisn}
-      </div>
-
-      <div style={{ fontSize: 13 }}>
-        Kelas: {s.kelas}
-      </div>
-
-      <div style={{ fontSize: 13 }}>
-        JK: {s.jk === "L" ? "Laki-laki" : "Perempuan"}
-      </div>
-
-      <div style={{ fontSize: 13 }}>
-        WA Ortu: {s.noWa || "-"}
-      </div>
-
-      <div style={{ marginTop: 8 }}>
-        <Badge
-          color={s.aktif ? C.emeraldDark : C.red}
-          bg={s.aktif ? C.emeraldLight : C.redLight}
-        >
-          {s.aktif ? "Aktif" : "Tidak Aktif"}
-        </Badge>
-      </div>
-
-      {canEdit && (
-        <div
-          style={{
-            display: "flex",
-            gap: 8,
-            marginTop: 12
-          }}
-        >
-          <Btn
-            small
-            variant="ghost"
-            onClick={() => openEdit(s)}
-          >
-            ✏️ Edit
-          </Btn>
-
-          <Btn
-            small
-            variant="danger"
-            onClick={() => handleDelete(s.nisn)}
-          >
-            🗑️ Hapus
-          </Btn>
-        </div>
-      )}
-    </Card>
-  ))}
-</div>
-
-)}
-
+    />
+  </div>
 </Card>
       <Modal open={modal} onClose={() => setModal(false)} title={edit ? "Edit Data Siswa" : "Tambah Siswa Baru"}>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 16px" }}>
+        <div
+  style={{
+    display: "grid",
+    gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
+    gap: "0 16px"
+  }}
+>
           <Input label="NISN" value={form.nisn} onChange={e => setForm(f => ({ ...f, nisn: e.target.value }))} />
           <Input label="NIPD" value={form.nipd} onChange={e => setForm(f => ({ ...f, nipd: e.target.value }))} />
           <div style={{ gridColumn: "1/-1" }}>
@@ -1737,8 +1630,28 @@ alert(JSON.stringify(error));
             <Input label="Alamat" value={form.alamat} onChange={e => setForm(f => ({ ...f, alamat: e.target.value }))} />
           </div>
         </div>
-        <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
-          <Btn variant="ghost" onClick={() => setModal(false)}>Batal</Btn>
+        <div
+  style={{
+    display: "flex",
+    flexDirection: isMobile ? "column" : "row",
+    gap: 10,
+    justifyContent: "flex-end"
+  }}
+>
+          <Btn
+  variant="ghost"
+  onClick={() => setModal(false)}
+  style={{ width: isMobile ? "100%" : "auto" }}
+>
+  Batal
+</Btn>
+
+<Btn
+  onClick={handleSave}
+  style={{ width: isMobile ? "100%" : "auto" }}
+>
+  Simpan
+</Btn>
           <Btn onClick={handleSave}>Simpan</Btn>
         </div>
       </Modal>
@@ -1754,6 +1667,7 @@ function ModulPelanggaran({ user, siswa, pelanggaran, setPelanggaran, apresiasi 
   const [searchSiswa, setSearchSiswa] = useState("");
   const [form, setForm] = useState({ nisn:"", kelas:"", jenis:"", kategori:"Ringan", poin:10, tanggal: new Date().toISOString().split("T")[0], guru: user.name });
   const [viewSP, setViewSP] = useState(null);
+  const isMobile = window.innerWidth <= 768;
   const canEdit = ["admin", "bk", "kesiswaan", "walas", "mapel", "kepsek"].includes(user.role);
   const filteredSiswa = siswa.filter(s => (searchSiswa === "" || s.nama.toLowerCase().includes(searchSiswa.toLowerCase())) && (kelasFilter === "" || s.kelas === kelasFilter));
 const [kategoriFilter, setKategoriFilter]= useState("");
