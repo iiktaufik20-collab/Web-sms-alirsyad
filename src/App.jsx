@@ -1777,6 +1777,8 @@ const jenisFiltered = JENIS_PELANGGARAN.filter(
   setSearchSiswa(s.nama);
 };
 const [editId, setEditId] = useState(null);
+const [showAllPanduan, setShowAllPanduan] = useState(false);
+const [showAllTopPoin, setShowAllTopPoin] = useState(false);
 
 const [formAbsensi, setFormAbsensi] = useState({
   status: "Hadir",
@@ -1869,18 +1871,79 @@ const handleEdit = (p) => {
   setSearchSiswa(p.nama || "");
   setModal(true);
 };
-  // Top siswa poin tertinggi
-  const topPoin = siswa.map(s => ({
-  ...s,
-  poin: getAkumulasiPoin(
-    s.nisn,
-    pelanggaran,
-    apresiasi
-  )
-}));
+  // Top siswa poin tertinggi (diurutkan dari poin terbesar)
+  const topPoin = siswa
+    .map(s => ({
+      ...s,
+      poin: getAkumulasiPoin(s.nisn, pelanggaran, apresiasi)
+    }))
+    .sort((a, b) => b.poin - a.poin);
+
+  const TOP_POIN_PREVIEW_COUNT = 5;
+  const topPoinVisible = showAllTopPoin ? topPoin : topPoin.slice(0, TOP_POIN_PREVIEW_COUNT);
 
   // Grafik per kelas
   const kelasData = KELAS_LIST.slice(0, 8).map(k => ({ label: k, value: pelanggaran.filter(p => p.kelas === k).reduce((s, p) => s + p.poin, 0) }));
+
+  // Data panduan alur & tindak lanjut (dipisah biar bisa di-collapse)
+  const panduanList = [
+    {
+      key: "ringan",
+      bg: "#dbeafe",
+      border: "#2563eb",
+      textColor: "#1e40af",
+      title: "10–30 Poin (Pelanggaran Ringan)",
+      pj: "Wali Kelas",
+      desc: "Tindak Lanjut: Pembinaan oleh wali kelas, komunikasi dengan orang tua, pemberian konsekuensi edukatif sesuai jenis pelanggaran, serta pemantauan perubahan perilaku."
+    },
+    {
+      key: "sedang",
+      bg: "#fef3c7",
+      border: "#d97706",
+      textColor: "#92400e",
+      title: "31–89 Poin (Pelanggaran Sedang)",
+      pj: "Guru BK",
+      desc: "Tindak Lanjut: Pembinaan bersama BK, komunikasi dengan orang tua, konseling, pemberian konsekuensi yang bersifat mendidik, serta pemantauan secara berkala."
+    },
+    {
+      key: "sp1",
+      bg: "#ffedd5",
+      border: "#ea580c",
+      textColor: "#7c2d12",
+      title: "90–179 Poin (Pelanggaran Berat - SP1)",
+      pj: "Waka Kesiswaan",
+      desc: "Tindak Lanjut: Penerbitan SP1, pembinaan bersama Waka Kesiswaan dan BK, pemanggilan orang tua, penandatanganan surat pernyataan, serta pemberian konsekuensi sesuai tata tertib sekolah."
+    },
+    {
+      key: "sp2",
+      bg: "#fee2e2",
+      border: "#dc2626",
+      textColor: "#991b1b",
+      title: "180–269 Poin (Pelanggaran Berat - SP2)",
+      pj: "Waka Kesiswaan",
+      desc: "Tindak Lanjut: Penerbitan SP2, pembinaan lanjutan, pemanggilan orang tua kembali, evaluasi perilaku siswa, dan kontrak pembinaan yang lebih ketat."
+    },
+    {
+      key: "sp3",
+      bg: "#fee2e2",
+      border: "#b91c1c",
+      textColor: "#7f1d1d",
+      title: "Tepat 270 Poin (Pelanggaran Berat - SP3)",
+      pj: "Waka Kesiswaan & Kepala Sekolah",
+      desc: "Tindak Lanjut: Penerbitan SP3, pemanggilan orang tua, pembinaan terakhir, serta pemberitahuan bahwa pelanggaran berikutnya akan diproses ke tahap sangat berat."
+    },
+    {
+      key: "sangat-berat",
+      bg: "#fecaca",
+      border: "#7f1d1d",
+      textColor: "#7f1d1d",
+      title: "> 270 Poin (Pelanggaran Sangat Berat)",
+      pj: "Kepala Sekolah",
+      desc: "Tindak Lanjut: Kasus diserahkan kepada Kepala Sekolah. Orang tua dipanggil untuk musyawarah dan sekolah dapat mengembalikan siswa kepada orang tua sesuai ketentuan yang berlaku."
+    }
+  ];
+  const PANDUAN_PREVIEW_COUNT = 2;
+  const panduanVisible = showAllPanduan ? panduanList : panduanList.slice(0, PANDUAN_PREVIEW_COUNT);
 
   return (
     <div>
@@ -1898,7 +1961,7 @@ const handleEdit = (p) => {
       <div className="grid-2col" style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: 20, marginBottom: 20 }}>
         <Card className="card-tight">
           <div style={{ fontWeight: 700, color: C.emeraldDark, marginBottom: 12 }}>🚨 Top Poin Tertinggi</div>
-          {topPoin.map((s, i) => {
+          {topPoinVisible.map((s, i) => {
             const sp = getSP(s.poin);
             return (
               <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
@@ -1911,6 +1974,28 @@ const handleEdit = (p) => {
               </div>
             );
           })}
+          {topPoin.length > TOP_POIN_PREVIEW_COUNT && (
+            <button
+              onClick={() => setShowAllTopPoin(v => !v)}
+              style={{
+                marginTop: "4px",
+                background: "none",
+                border: "none",
+                color: C.emeraldDark,
+                fontWeight: 600,
+                fontSize: "12px",
+                cursor: "pointer",
+                padding: 0,
+                display: "flex",
+                alignItems: "center",
+                gap: "4px"
+              }}
+            >
+              {showAllTopPoin
+                ? "▲ Sembunyikan"
+                : `▼ Lihat Selengkapnya (${topPoin.length - TOP_POIN_PREVIEW_COUNT} lagi)`}
+            </button>
+          )}
         </Card>
         <Card className="card-tight">
           <div style={{ fontWeight: 700, color: C.emeraldDark, marginBottom: 12 }}>📊 Poin Pelanggaran per Kelas</div>
@@ -2103,73 +2188,52 @@ const handleEdit = (p) => {
     ℹ️ Alur & Tindak Lanjut Berdasarkan Akumulasi Poin
   </h4>
   <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-    
-    {/* Ringan */}
-    <div style={{ padding: "8px 12px", backgroundColor: "#dbeafe", borderRadius: "6px", borderLeft: "4px solid #2563eb" }}>
-      <div style={{ fontSize: "12px", color: "#1e40af" }}>
-        <strong>10–30 Poin (Pelanggaran Ringan)</strong> — <span style={{ fontWeight: 600 }}>PJ: Wali Kelas</span>
+    {panduanVisible.map((item) => (
+      <div
+        key={item.key}
+        style={{
+          padding: "8px 12px",
+          backgroundColor: item.bg,
+          borderRadius: "6px",
+          borderLeft: `4px solid ${item.border}`
+        }}
+      >
+        <div style={{ fontSize: "12px", color: item.textColor }}>
+          <strong>{item.title}</strong> — <span style={{ fontWeight: 600 }}>PJ: {item.pj}</span>
+        </div>
+        <div style={{ fontSize: "11px", color: item.textColor, marginTop: "2px" }}>
+          {item.desc}
+        </div>
       </div>
-      <div style={{ fontSize: "11px", color: "#1e40af", marginTop: "2px" }}>
-        Tindak Lanjut: Pembinaan oleh wali kelas, komunikasi dengan orang tua, pemberian konsekuensi edukatif sesuai jenis pelanggaran, serta pemantauan perubahan perilaku.
-      </div>
-    </div>
-
-    {/* Sedang */}
-    <div style={{ padding: "8px 12px", backgroundColor: "#fef3c7", borderRadius: "6px", borderLeft: "4px solid #d97706" }}>
-      <div style={{ fontSize: "12px", color: "#92400e" }}>
-        <strong>31–89 Poin (Pelanggaran Sedang)</strong> — <span style={{ fontWeight: 600 }}>PJ: Guru BK</span>
-      </div>
-      <div style={{ fontSize: "11px", color: "#92400e", marginTop: "2px" }}>
-        Tindak Lanjut: Pembinaan bersama BK, komunikasi dengan orang tua, konseling, pemberian konsekuensi yang bersifat mendidik, serta pemantauan secara berkala.
-      </div>
-    </div>
-
-    {/* SP1 */}
-    <div style={{ padding: "8px 12px", backgroundColor: "#ffedd5", borderRadius: "6px", borderLeft: "4px solid #ea580c" }}>
-      <div style={{ fontSize: "12px", color: "#7c2d12" }}>
-        <strong>90–179 Poin (Pelanggaran Berat - SP1)</strong> — <span style={{ fontWeight: 600 }}>PJ: Waka Kesiswaan</span>
-      </div>
-      <div style={{ fontSize: "11px", color: "#7c2d12", marginTop: "2px" }}>
-        Tindak Lanjut: Penerbitan SP1, pembinaan bersama Waka Kesiswaan dan BK, pemanggilan orang tua, penandatanganan surat pernyataan, serta pemberian konsekuensi sesuai tata tertib sekolah.
-      </div>
-    </div>
-
-    {/* SP2 */}
-    <div style={{ padding: "8px 12px", backgroundColor: "#fee2e2", borderRadius: "6px", borderLeft: "4px solid #dc2626" }}>
-      <div style={{ fontSize: "12px", color: "#991b1b" }}>
-        <strong>180–269 Poin (Pelanggaran Berat - SP2)</strong> — <span style={{ fontWeight: 600 }}>PJ: Waka Kesiswaan</span>
-      </div>
-      <div style={{ fontSize: "11px", color: "#991b1b", marginTop: "2px" }}>
-        Tindak Lanjut: Penerbitan SP2, pembinaan lanjutan, pemanggilan orang tua kembali, evaluasi perilaku siswa, dan kontrak pembinaan yang lebih ketat.
-      </div>
-    </div>
-
-    {/* SP3 */}
-    <div style={{ padding: "8px 12px", backgroundColor: "#fee2e2", borderRadius: "6px", borderLeft: "4px solid #b91c1c" }}>
-      <div style={{ fontSize: "12px", color: "#7f1d1d" }}>
-        <strong>Tepat 270 Poin (Pelanggaran Berat - SP3)</strong> — <span style={{ fontWeight: 600 }}>PJ: Waka Kesiswaan & Kepala Sekolah</span>
-      </div>
-      <div style={{ fontSize: "11px", color: "#7f1d1d", marginTop: "2px" }}>
-        Tindak Lanjut: Penerbitan SP3, pemanggilan orang tua, pembinaan terakhir, serta pemberitahuan bahwa pelanggaran berikutnya akan diproses ke tahap sangat berat.
-      </div>
-    </div>
-
-    {/* Sangat Berat */}
-    <div style={{ padding: "8px 12px", backgroundColor: "#fecaca", borderRadius: "6px", borderLeft: "4px solid #7f1d1d" }}>
-      <div style={{ fontSize: "12px", color: "#7f1d1d" }}>
-        <strong>{"> 270 Poin (Pelanggaran Sangat Berat)"}</strong> — <span style={{ fontWeight: 600 }}>PJ: Kepala Sekolah</span>
-      </div>
-      <div style={{ fontSize: "11px", color: "#7f1d1d", marginTop: "2px" }}>
-        Tindak Lanjut: Kasus diserahkan kepada Kepala Sekolah. Orang tua dipanggil untuk musyawarah dan sekolah dapat mengembalikan siswa kepada orang tua sesuai ketentuan yang berlaku.
-      </div>
-    </div>
-
+    ))}
   </div>
+
+  {panduanList.length > PANDUAN_PREVIEW_COUNT && (
+    <button
+      onClick={() => setShowAllPanduan(v => !v)}
+      style={{
+        marginTop: "12px",
+        background: "none",
+        border: "none",
+        color: C.emeraldDark,
+        fontWeight: 600,
+        fontSize: "12px",
+        cursor: "pointer",
+        padding: 0,
+        display: "flex",
+        alignItems: "center",
+        gap: "4px"
+      }}
+    >
+      {showAllPanduan
+        ? "▲ Sembunyikan"
+        : `▼ Lihat Selengkapnya (${panduanList.length - PANDUAN_PREVIEW_COUNT} lagi)`}
+    </button>
+  )}
 </div>
     </div>
   );
 }
-
 // ===================== MODUL APRESIASI =====================
 function ModulApresiasi({ user, siswa, pelanggaran, apresiasi, setApresiasi }) {
   const [modal, setModal] = useState(false);
