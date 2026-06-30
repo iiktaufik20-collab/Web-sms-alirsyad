@@ -556,6 +556,30 @@ const SimpleBar = ({ data, label, color = C.emerald, height = 120 }) => {
   );
 };
 
+const ShowMoreToggle = ({ show, onToggle, total, visibleCount }) => {
+  if (total <= visibleCount) return null;
+  return (
+    <button
+      onClick={onToggle}
+      style={{
+        marginTop: "8px",
+        background: "none",
+        border: "none",
+        color: C.emeraldDark,
+        fontWeight: 600,
+        fontSize: "12px",
+        cursor: "pointer",
+        padding: 0,
+        display: "flex",
+        alignItems: "center",
+        gap: "4px"
+      }}
+    >
+      {show ? "▲ Sembunyikan" : `▼ Lihat Selengkapnya (${total - visibleCount} lagi)`}
+    </button>
+  );
+};
+
 const Modal = ({ open, onClose, title, children }) => {
   if (!open) return null;
   return (
@@ -1180,12 +1204,20 @@ function DashboardUtama({ user, siswa, pelanggaran, apresiasi, hafalan, vocab, c
   const totalApresiasi = apresiasi.length;
   const totalHafalan = hafalan.length;
 
+  const [showAllRankHafalan, setShowAllRankHafalan] = useState(false);
+  const [showAllRankVocab, setShowAllRankVocab] = useState(false);
+  const [showAllPelanggaranKelas, setShowAllPelanggaranKelas] = useState(false);
+  const RANK_PREVIEW_COUNT = 5;
+
   // Ranking hafalan
-  const rankHafalan = siswa.map(s => ({ nama: s.nama, kelas: s.kelas, total: totalHafalanSiswa(s.nisn, hafalan) })).sort((a, b) => b.total - a.total).slice(0, 5);
+  const rankHafalanAll = siswa.map(s => ({ nama: s.nama, kelas: s.kelas, total: totalHafalanSiswa(s.nisn, hafalan) })).sort((a, b) => b.total - a.total);
+  const rankHafalan = showAllRankHafalan ? rankHafalanAll : rankHafalanAll.slice(0, RANK_PREVIEW_COUNT);
   // Ranking vocab
-  const rankVocab = siswa.map(s => ({ nama: s.nama, kelas: s.kelas, total: totalVocabSiswa(s.nisn, vocab) })).sort((a, b) => b.total - a.total).slice(0, 5);
+  const rankVocabAll = siswa.map(s => ({ nama: s.nama, kelas: s.kelas, total: totalVocabSiswa(s.nisn, vocab) })).sort((a, b) => b.total - a.total);
+  const rankVocab = showAllRankVocab ? rankVocabAll : rankVocabAll.slice(0, RANK_PREVIEW_COUNT);
   // Ranking pelanggaran per kelas
-  const pelanggaranKelas = KELAS_LIST.map(k => ({ label: k, value: pelanggaran.filter(p => p.kelas === k).reduce((s, p) => s + p.poin, 0) })).sort((a, b) => a.value - b.value);
+  const pelanggaranKelasAll = KELAS_LIST.map(k => ({ label: k, value: pelanggaran.filter(p => p.kelas === k).reduce((s, p) => s + p.poin, 0) })).sort((a, b) => a.value - b.value);
+  const pelanggaranKelas = showAllPelanggaranKelas ? pelanggaranKelasAll : pelanggaranKelasAll.slice(0, RANK_PREVIEW_COUNT);
   // Hafalan per kelas
   const hafalanKelas = KELAS_LIST.slice(0, 6).map(k => ({ label: k, value: hafalan.filter(h => siswa.find(s => s.nisn === h.nisn && s.kelas === k)).length }));
   // Vocab per kelas
@@ -1266,6 +1298,7 @@ const roleLabel = { admin: "Admin", kepsek: "Kepala Sekolah", bk: "Guru BK", kes
               <Badge color={C.emeraldDark} bg={C.emeraldLight}>{r.total} setoran</Badge>
             </div>
           ))}
+          <ShowMoreToggle show={showAllRankHafalan} onToggle={() => setShowAllRankHafalan(v => !v)} total={rankHafalanAll.length} visibleCount={RANK_PREVIEW_COUNT} />
         </Card>
 
         {/* Top Vocab Siswa */}
@@ -1278,18 +1311,20 @@ const roleLabel = { admin: "Admin", kepsek: "Kepala Sekolah", bk: "Guru BK", kes
               <Badge color={C.gold} bg={C.goldLight}>{r.total} kata</Badge>
             </div>
           ))}
+          <ShowMoreToggle show={showAllRankVocab} onToggle={() => setShowAllRankVocab(v => !v)} total={rankVocabAll.length} visibleCount={RANK_PREVIEW_COUNT} />
         </Card>
 
         {/* Kelas Terbaik Pelanggaran (poin terendah) */}
         <Card className="card-tight">
           <div style={{ fontWeight: 700, color: C.emeraldDark, marginBottom: 14 }}>🏫 Kelas Poin Pelanggaran Terendah</div>
-          {pelanggaranKelas.slice(0, 5).map((r, i) => (
+          {pelanggaranKelas.map((r, i) => (
             <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
               <div style={{ width: 26, height: 26, borderRadius: 99, background: i < 3 ? C.emerald : C.gray100, color: i < 3 ? C.white : C.gray700, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 12, flexShrink: 0 }}>{i + 1}</div>
               <div style={{ flex: 1, fontSize: 13, fontWeight: 600 }}>{r.label}</div>
               <Badge color={r.value === 0 ? C.emeraldDark : C.red} bg={r.value === 0 ? C.emeraldLight : C.redLight}>{r.value} poin</Badge>
             </div>
           ))}
+          <ShowMoreToggle show={showAllPelanggaranKelas} onToggle={() => setShowAllPelanggaranKelas(v => !v)} total={pelanggaranKelasAll.length} visibleCount={RANK_PREVIEW_COUNT} />
         </Card>
       </div>
 
@@ -1760,6 +1795,9 @@ const [kategoriFilter, setKategoriFilter]= useState("");
     (search === "" || p.nama?.toLowerCase().includes(search.toLowerCase()) || p.kelas?.includes(search)) && 
     (kelasFilter === "" || p.kelas === kelasFilter)
 ); 
+  const [showAllTabelPelanggaran, setShowAllTabelPelanggaran] = useState(false);
+  const TABEL_PREVIEW_COUNT = 10;
+  const filteredVisible = showAllTabelPelanggaran ? filtered : filtered.slice(0, TABEL_PREVIEW_COUNT);
   const handleJenisChange = (e) => {
     const j = JENIS_PELANGGARAN.find(jp => jp.nama === e.target.value);
     if (j) setForm(f => ({ ...f, jenis: j.nama, kategori: j.kategori, poin: j.poin }));
@@ -2017,7 +2055,7 @@ const handleEdit = (p) => {
       <Card className="card-tight">
         <Table
           cols={["Tanggal", "Nama", "Kelas", "Jenis Pelanggaran", "Kategori", "Poin", "Guru", "Status", "Aksi"]}
-          rows={filtered}
+          rows={filteredVisible}
           renderRow={(p) => {
   const totalPoin = getAkumulasiPoin(p.nisn, pelanggaran, apresiasi);
   const sp = getSP(totalPoin);
@@ -2115,6 +2153,7 @@ const handleEdit = (p) => {
   );
 }}
         />
+        <ShowMoreToggle show={showAllTabelPelanggaran} onToggle={() => setShowAllTabelPelanggaran(v => !v)} total={filtered.length} visibleCount={TABEL_PREVIEW_COUNT} />
       </Card>
 
       <Modal open={modal} onClose={() => setModal(false)} title="Input Pelanggaran Siswa">
@@ -2251,6 +2290,9 @@ function ModulApresiasi({ user, siswa, pelanggaran, apresiasi, setApresiasi }) {
   jenisCustom: ""
 });
   const [jenisLainnya, setJenisLainnya] = useState(false);
+  const [showAllApresiasi, setShowAllApresiasi] = useState(false);
+  const APRESIASI_PREVIEW_COUNT = 10;
+  const apresiasiVisible = showAllApresiasi ? apresiasi : apresiasi.slice(0, APRESIASI_PREVIEW_COUNT);
 
   const canEdit = ["admin", "bk", "kesiswaan", "walas", "kepsek", "qiroati"].includes(user.role);
   const filteredSiswa = siswa.filter(s => (form.kelas === "" || s.kelas === form.kelas) && (searchSiswa === "" || s.nama.toLowerCase().includes(searchSiswa.toLowerCase())));
@@ -2365,7 +2407,7 @@ return (
       <Card className="card-tight">
         <Table
           cols={["Tanggal", "Nama", "Kelas", "Jenis Apresiasi", "Pengurangan Poin", "Keterangan", "Guru", "Aksi"]}
-          rows={apresiasi}
+          rows={apresiasiVisible}
           renderRow={(a) => <>
   <td style={{ padding: "10px 12px", fontSize: 12 }}>
     {formatDate(a.tanggal)}
@@ -2418,6 +2460,7 @@ return (
   </td>
 </>}
         />
+        <ShowMoreToggle show={showAllApresiasi} onToggle={() => setShowAllApresiasi(v => !v)} total={apresiasi.length} visibleCount={APRESIASI_PREVIEW_COUNT} />
       </Card>
 
       <Modal open={modal} onClose={() => setModal(false)} title="Input Apresiasi Siswa">
@@ -2555,9 +2598,17 @@ const handleDelete = async (id) => {
   );
 };
   // Rankings
-  const rankHafalan = siswa.map(s => ({ nama: s.nama, kelas: s.kelas, total: hafalan.filter(h => h.nisn === s.nisn && h.status === "Lulus").length })).sort((a, b) => b.total - a.total).slice(0, 5);
-  const rankRajin = siswa.map(s => ({ nama: s.nama, kelas: s.kelas, total: hafalan.filter(h => h.nisn === s.nisn).length })).sort((a, b) => b.total - a.total).slice(0, 5);
+  const [showAllTopHafalan, setShowAllTopHafalan] = useState(false);
+  const [showAllRajin, setShowAllRajin] = useState(false);
+  const [showAllTabelQiroati, setShowAllTabelQiroati] = useState(false);
+  const RANK_PREVIEW_COUNT = 5;
+  const TABEL_PREVIEW_COUNT = 10;
+  const rankHafalanAll = siswa.map(s => ({ nama: s.nama, kelas: s.kelas, total: hafalan.filter(h => h.nisn === s.nisn && h.status === "Lulus").length })).sort((a, b) => b.total - a.total);
+  const rankHafalan = showAllTopHafalan ? rankHafalanAll : rankHafalanAll.slice(0, RANK_PREVIEW_COUNT);
+  const rankRajinAll = siswa.map(s => ({ nama: s.nama, kelas: s.kelas, total: hafalan.filter(h => h.nisn === s.nisn).length })).sort((a, b) => b.total - a.total);
+  const rankRajin = showAllRajin ? rankRajinAll : rankRajinAll.slice(0, RANK_PREVIEW_COUNT);
   const hafalanKelas = KELAS_LIST.slice(0, 6).map(k => ({ label: k, value: hafalan.filter(h => h.kelas === k && h.status === "Lulus").length }));
+  const filteredVisible = showAllTabelQiroati ? filtered : filtered.slice(0, TABEL_PREVIEW_COUNT);
 
   return (
     <div>
@@ -2610,6 +2661,7 @@ const handleDelete = async (id) => {
               <Badge color={C.emeraldDark} bg={C.emeraldLight}>{r.total}</Badge>
             </div>
           ))}
+          <ShowMoreToggle show={showAllTopHafalan} onToggle={() => setShowAllTopHafalan(v => !v)} total={rankHafalanAll.length} visibleCount={RANK_PREVIEW_COUNT} />
         </Card>
         <Card className="card-tight">
           <div style={{ fontWeight: 700, color: C.emeraldDark, marginBottom: 12 }}>⭐ Paling Rajin Setor</div>
@@ -2620,6 +2672,7 @@ const handleDelete = async (id) => {
               <Badge>{r.total}x</Badge>
             </div>
           ))}
+          <ShowMoreToggle show={showAllRajin} onToggle={() => setShowAllRajin(v => !v)} total={rankRajinAll.length} visibleCount={RANK_PREVIEW_COUNT} />
         </Card>
       </div>
 
@@ -2640,7 +2693,7 @@ const handleDelete = async (id) => {
       <Card className="card-tight">
         <Table
           cols={["Tanggal", "Nama", "Kelas", "Tipe", "Capaian", "Kelancaran", "Status", "Aksi"]}
-          rows={filtered}
+          rows={filteredVisible}
           renderRow={(h) => <>
             <td style={{ padding: "10px 12px", fontSize: 12 }}>{formatDate(h.tanggal)}</td>
             <td style={{ padding: "10px 12px", fontWeight: 600 }}>{h.nama}</td>
@@ -2670,6 +2723,7 @@ const handleDelete = async (id) => {
 </td>
           </>}
         />
+        <ShowMoreToggle show={showAllTabelQiroati} onToggle={() => setShowAllTabelQiroati(v => !v)} total={filtered.length} visibleCount={TABEL_PREVIEW_COUNT} />
       </Card>
 
       <Modal open={modal} onClose={() => setModal(false)} title="Input Setoran Qiroati">
@@ -2790,8 +2844,14 @@ const handleSave = async () => {
   setSearchSiswa("");
   setModal(false);
 };
-  const rankVocab = siswa.map(s => ({ nama: s.nama, kelas: s.kelas, total: totalVocabSiswa(s.nisn, vocab) })).sort((a, b) => b.total - a.total).slice(0, 5);
+  const [showAllRankVocab, setShowAllRankVocab] = useState(false);
+  const [showAllTabelVocab, setShowAllTabelVocab] = useState(false);
+  const RANK_PREVIEW_COUNT = 5;
+  const TABEL_PREVIEW_COUNT = 10;
+  const rankVocabAll = siswa.map(s => ({ nama: s.nama, kelas: s.kelas, total: totalVocabSiswa(s.nisn, vocab) })).sort((a, b) => b.total - a.total);
+  const rankVocab = showAllRankVocab ? rankVocabAll : rankVocabAll.slice(0, RANK_PREVIEW_COUNT);
   const vocabKelas = KELAS_LIST.slice(0, 8).map(k => ({ label: k, value: vocab.filter(v => v.kelas === k).reduce((s, v) => s + v.jumlah, 0) }));
+  const filteredVisible = showAllTabelVocab ? filtered : filtered.slice(0, TABEL_PREVIEW_COUNT);
 const handleDelete = async (id) => {
   if (!window.confirm("Yakin ingin menghapus data ini?")) return;
 
@@ -2850,6 +2910,7 @@ const handleEdit = (data) => {
               <Badge color={C.gold} bg={C.goldLight}>{r.total} kata</Badge>
             </div>
           ))}
+          <ShowMoreToggle show={showAllRankVocab} onToggle={() => setShowAllRankVocab(v => !v)} total={rankVocabAll.length} visibleCount={RANK_PREVIEW_COUNT} />
         </Card>
       </div>
 
@@ -2863,7 +2924,7 @@ const handleEdit = (data) => {
       <Card className="card-tight">
         <Table
           cols={["Tanggal", "Nama", "Kelas", "Jumlah Vocab", "Keterangan", "Guru", "Aksi"]}
-          rows={filtered}
+          rows={filteredVisible}
           renderRow={(v) => (
   <>
     <td style={{ padding: "10px 12px", fontSize: 12 }}>
@@ -2916,6 +2977,7 @@ const handleEdit = (data) => {
   </>
 )}
         />
+        <ShowMoreToggle show={showAllTabelVocab} onToggle={() => setShowAllTabelVocab(v => !v)} total={filtered.length} visibleCount={TABEL_PREVIEW_COUNT} />
       </Card>
 
       <Modal
@@ -3451,6 +3513,9 @@ function ModulCatatan({ user, siswa, catatan, setCatatan }) {
 const [editId, setEditId] = useState(null);
   const filteredSiswa = siswa.filter(s => (form.kelas === "" || s.kelas === form.kelas) && (searchSiswa === "" || s.nama.toLowerCase().includes(searchSiswa.toLowerCase())));
   const filtered = catatan.filter(c => kelasFilter === "" || c.kelas === kelasFilter);
+  const [showAllTabelCatatan, setShowAllTabelCatatan] = useState(false);
+  const TABEL_PREVIEW_COUNT = 10;
+  const filteredVisible = showAllTabelCatatan ? filtered : filtered.slice(0, TABEL_PREVIEW_COUNT);
 
   const handleSiswaSelect = (s) => { setForm(f => ({ ...f, nisn: s.nisn, kelas: s.kelas })); setSearchSiswa(s.nama); };
   const handleSave = async () => {
@@ -3629,7 +3694,7 @@ const handleDelete = async (id) => {
   "Guru",
   "Aksi"
 ]}
-          rows={filtered}
+          rows={filteredVisible}
           renderRow={(c) => (
   <>
     <td style={{ padding: "10px 12px", fontSize: 12 }}>
@@ -3684,6 +3749,7 @@ const handleDelete = async (id) => {
   </>
 )}
         />
+        <ShowMoreToggle show={showAllTabelCatatan} onToggle={() => setShowAllTabelCatatan(v => !v)} total={filtered.length} visibleCount={TABEL_PREVIEW_COUNT} />
       </Card>
 
       <Modal open={modal} onClose={() => setModal(false)} title="Input Catatan Kejadian">
