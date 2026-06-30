@@ -3,6 +3,144 @@ import { useState, useEffect, useRef } from "react";
 import logoAlirsyad from "./assets/logo-alirsyad.png";
 import * as XLSX from "xlsx";
 
+// ===================== RESPONSIVE GLOBAL STYLES =====================
+// Stylesheet ini membuat layout (sidebar, topbar, grid statistik, filter,
+// tabel, dan modal) menyesuaikan otomatis ke lebar layar HP (<= 768px) dan
+// layar sangat kecil (<= 420px), tanpa mengubah tampilan desktop yang sudah ada.
+const RESPONSIVE_CSS = `
+  * { -webkit-tap-highlight-color: transparent; }
+  body { -webkit-text-size-adjust: 100%; }
+
+  .app-shell { position: relative; }
+
+  /* ===== Sidebar: jadi drawer overlay di HP ===== */
+  @media (max-width: 768px) {
+    .app-sidebar {
+      position: fixed !important;
+      top: 0; left: 0; bottom: 0;
+      z-index: 1200;
+      width: 240px !important;
+      box-shadow: 2px 0 24px rgba(0,0,0,.25);
+      transform: translateX(-100%);
+      transition: transform .25s ease;
+    }
+    .app-sidebar.open {
+      transform: translateX(0);
+    }
+    .sidebar-backdrop {
+      position: fixed; inset: 0; z-index: 1100;
+      background: rgba(0,0,0,.45);
+    }
+    .app-main { width: 100%; }
+  }
+
+  /* ===== Topbar ===== */
+  @media (max-width: 768px) {
+    .app-topbar {
+      padding: 10px 12px !important;
+    }
+    .app-topbar-title-full { display: none !important; }
+    .app-topbar-title-short { display: block !important; }
+  }
+  @media (min-width: 769px) {
+    .app-topbar-title-short { display: none !important; }
+  }
+
+  /* ===== Konten utama ===== */
+  @media (max-width: 768px) {
+    .app-content { padding: 12px !important; }
+  }
+
+  /* ===== Header modul (judul + tombol aksi) ===== */
+  .module-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 20px; gap: 12px; flex-wrap: wrap;
+  }
+  @media (max-width: 600px) {
+    .module-header { flex-direction: column; align-items: stretch; }
+    .module-header > * { width: 100%; }
+    .module-header button { width: 100%; }
+  }
+
+  /* Baris tombol aksi (misal Modul Guru: Hapus Semua / Import / Tambah) */
+  .module-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+  @media (max-width: 600px) {
+    .module-actions { width: 100%; }
+    .module-actions button, .module-actions > * { flex: 1 1 auto; }
+  }
+
+  /* ===== Filter bar (search + select kelas, dll) ===== */
+  .filter-bar { display: flex; gap: 12px; flex-wrap: wrap; }
+  @media (max-width: 600px) {
+    .filter-bar { flex-direction: column; }
+    .filter-bar input, .filter-bar select { width: 100% !important; box-sizing: border-box; }
+  }
+
+  /* ===== Grid generik dipakai untuk stat card / chart blok ===== */
+  .grid-auto { display: grid; gap: 14px; }
+  @media (max-width: 768px) {
+    .grid-auto { grid-template-columns: repeat(2, 1fr) !important; }
+  }
+  @media (max-width: 420px) {
+    .grid-auto { grid-template-columns: 1fr !important; }
+  }
+
+  .grid-2col { display: grid; gap: 20px; }
+  @media (max-width: 768px) {
+    .grid-2col { grid-template-columns: 1fr !important; }
+  }
+
+  .grid-3col { display: grid; gap: 20px; }
+  @media (max-width: 900px) {
+    .grid-3col { grid-template-columns: 1fr !important; }
+  }
+
+  .grid-4col { display: grid; gap: 12px; }
+  @media (max-width: 768px) {
+    .grid-4col { grid-template-columns: repeat(2, 1fr) !important; }
+  }
+  @media (max-width: 420px) {
+    .grid-4col { grid-template-columns: 1fr !important; }
+  }
+
+  /* Grid form 2 kolom di dalam modal */
+  .form-grid-2 { display: grid; gap: 0 16px; }
+  @media (max-width: 480px) {
+    .form-grid-2 { grid-template-columns: 1fr !important; }
+  }
+
+  /* ===== Tabel ===== */
+  .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  @media (max-width: 768px) {
+    .responsive-table { min-width: 640px; font-size: 12px !important; }
+    .responsive-table th, .responsive-table td { padding: 8px 8px !important; white-space: nowrap; }
+  }
+
+  /* ===== Modal ===== */
+  @media (max-width: 600px) {
+    .modal-overlay { padding: 0 !important; align-items: flex-end !important; }
+    .modal-box {
+      width: 100% !important;
+      max-width: 100% !important;
+      max-height: 92vh !important;
+      border-radius: 16px 16px 0 0 !important;
+      padding: 18px !important;
+    }
+  }
+
+  /* ===== Card padding di HP kecil ===== */
+  @media (max-width: 420px) {
+    .card-tight { padding: 14px !important; }
+  }
+
+  /* ===== Tab nav (Laporan) bisa di-scroll horizontal di HP ===== */
+  .tab-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  @media (max-width: 600px) {
+    .tab-scroll { flex-wrap: nowrap !important; }
+    .tab-scroll button { flex-shrink: 0; }
+  }
+`;
+
 // ===================== MOCK DATA =====================
 const INITIAL_USERS = [
   { id: 1, username: "admin", password: "admin123", role: "admin", name: "Administrator" },
@@ -344,8 +482,8 @@ const Badge = ({ children, color = C.emerald, bg = C.emeraldLight }) => (
   <span style={{ background: bg, color, padding: "2px 10px", borderRadius: 99, fontSize: 12, fontWeight: 600 }}>{children}</span>
 );
 
-const Card = ({ children, style = {} }) => (
-  <div style={{ background: C.white, borderRadius: 12, boxShadow: "0 1px 8px rgba(0,0,0,0.08)", padding: 20, ...style }}>{children}</div>
+const Card = ({ children, style = {}, className = "" }) => (
+  <div className={className} style={{ background: C.white, borderRadius: 12, boxShadow: "0 1px 8px rgba(0,0,0,0.08)", padding: 20, boxSizing: "border-box", ...style }}>{children}</div>
 );
 
 const StatCard = ({ icon, label, value, color = C.emerald, sub }) => (
@@ -387,8 +525,8 @@ const Btn = ({ children, onClick, variant = "primary", small, style = {} }) => {
 };
 
 const Table = ({ cols, rows, renderRow }) => (
-  <div style={{ overflowX: "auto" }}>
-    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+  <div className="table-wrap" style={{ overflowX: "auto" }}>
+    <table className="responsive-table" style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
       <thead>
         <tr>{cols.map(c => <th key={c} style={{ background: C.emeraldLight, color: C.emeraldDark, padding: "10px 12px", textAlign: "left", fontWeight: 700 }}>{c}</th>)}</tr>
       </thead>
@@ -421,9 +559,9 @@ const SimpleBar = ({ data, label, color = C.emerald, height = 120 }) => {
 const Modal = ({ open, onClose, title, children }) => {
   if (!open) return null;
   return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.45)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}
+    <div className="modal-overlay" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.45)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}
       onClick={e => e.target === e.currentTarget && onClose()}>
-      <div style={{ background: C.white, borderRadius: 14, boxShadow: "0 8px 40px rgba(0,0,0,.18)", padding: 28, width: "100%", maxWidth: 560, maxHeight: "90vh", overflowY: "auto" }}>
+      <div className="modal-box" style={{ background: C.white, borderRadius: 14, boxShadow: "0 8px 40px rgba(0,0,0,.18)", padding: 28, width: "100%", maxWidth: 560, maxHeight: "90vh", overflowY: "auto", boxSizing: "border-box" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
           <div style={{ fontWeight: 700, fontSize: 17, color: C.gray900 }}>{title}</div>
           <button onClick={onClose} style={{ border: "none", background: "none", fontSize: 20, cursor: "pointer", color: C.gray600 }}>✕</button>
@@ -518,8 +656,18 @@ const MENUS = {
 export default function App() {
   const [user, setUser] = useState(null);
   const [activeMenu, setActiveMenu] = useState("dashboard");
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-  const isMobile = window.innerWidth <= 768;
+  const [isMobile, setIsMobile] = useState(typeof window !== "undefined" ? window.innerWidth <= 768 : false);
+  const [sidebarOpen, setSidebarOpen] = useState(typeof window !== "undefined" ? window.innerWidth > 768 : true);
+
+  useEffect(() => {
+    const onResize = () => {
+      const mobile = window.innerWidth <= 768;
+      setIsMobile(mobile);
+      setSidebarOpen(!mobile);
+    };
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
 
   // State data
   const [siswa, setSiswa] = useState(INITIAL_SISWA);
@@ -670,12 +818,22 @@ const loadCatatan = async () => {
 
   const menus = MENUS[user.role] || [];
 
+  const handleMenuClick = (key) => {
+    setActiveMenu(key);
+    if (isMobile) setSidebarOpen(false);
+  };
+
   return (
-    <div style={{ display: "flex", minHeight: "100vh", background: C.gray50, fontFamily: "'Segoe UI', Tahoma, sans-serif" }}>
+    <div className="app-shell" style={{ display: "flex", minHeight: "100vh", background: C.gray50, fontFamily: "'Segoe UI', Tahoma, sans-serif" }}>
+      <style>{RESPONSIVE_CSS}</style>
+
+      {/* Backdrop saat sidebar terbuka di HP */}
+      {isMobile && sidebarOpen && (
+        <div className="sidebar-backdrop" onClick={() => setSidebarOpen(false)} />
+      )}
+
       {/* Sidebar */}
-      <div style={{ width: isMobile
-  ? (sidebarOpen ? 220 : 0)
-  : (sidebarOpen ? 230 : 60), background: `linear-gradient(180deg, ${C.emeraldDark} 0%, #064e3b 100%)`, transition: "width .25s", flexShrink: 0, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+      <div className={`app-sidebar${sidebarOpen ? " open" : ""}`} style={{ width: sidebarOpen ? 230 : 60, background: `linear-gradient(180deg, ${C.emeraldDark} 0%, #064e3b 100%)`, transition: "width .25s", flexShrink: 0, display: "flex", flexDirection: "column", overflow: "hidden" }}>
         {/* Logo */}
         <div style={{ padding: "18px 16px", borderBottom: "1px solid rgba(255,255,255,.12)" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -685,7 +843,8 @@ const loadCatatan = async () => {
   style={{
     width: "50px",
     height: "50px",
-    objectFit: "contain"
+    objectFit: "contain",
+    flexShrink: 0
   }}
 />
           {sidebarOpen && (
@@ -700,7 +859,7 @@ const loadCatatan = async () => {
         {/* Nav */}
         <nav style={{ flex: 1, padding: "12px 8px", overflowY: "auto" }}>
           {menus.map(m => (
-            <button key={m.key} onClick={() => setActiveMenu(m.key)}
+            <button key={m.key} onClick={() => handleMenuClick(m.key)}
               style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", padding: "10px 12px", borderRadius: 8, border: "none", cursor: "pointer", marginBottom: 2, background: activeMenu === m.key ? "rgba(255,255,255,.15)" : "transparent", color: activeMenu === m.key ? C.white : "rgba(255,255,255,.7)", fontWeight: activeMenu === m.key ? 700 : 400, fontSize: 13, textAlign: "left", transition: "background .15s" }}>
               <span style={{ fontSize: 16, flexShrink: 0 }}>{m.icon}</span>
               {sidebarOpen && m.label}
@@ -719,17 +878,18 @@ const loadCatatan = async () => {
       </div>
 
       {/* Main */}
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+      <div className="app-main" style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minWidth: 0 }}>
         {/* Topbar */}
-        <div style={{ background: C.white, padding: isMobile ? "10px 12px" : "12px 24px", borderBottom: `1px solid ${C.gray200}`, display: "flex", alignItems: "center", justifyContent: "space-between", boxShadow: "0 1px 4px rgba(0,0,0,.05)" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <button onClick={() => setSidebarOpen(v => !v)} style={{ border: "none", background: "none", fontSize: 20, cursor: "pointer", color: C.gray700 }}>☰</button>
-            <div>
-              <div style={{ fontWeight: 700, fontSize: 15, color: C.emeraldDark }}>SMP Al-Irsyad Al-Islamiyyah Kota Cirebon</div>
-              <div style={{ fontSize: 11, color: C.gray600 }}>Sistem Monitoring Siswa (SMS)</div>
+        <div className="app-topbar" style={{ background: C.white, padding: "12px 24px", borderBottom: `1px solid ${C.gray200}`, display: "flex", alignItems: "center", justifyContent: "space-between", boxShadow: "0 1px 4px rgba(0,0,0,.05)", gap: 10 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
+            <button onClick={() => setSidebarOpen(v => !v)} style={{ border: "none", background: "none", fontSize: 20, cursor: "pointer", color: C.gray700, flexShrink: 0 }}>☰</button>
+            <div style={{ minWidth: 0 }}>
+              <div className="app-topbar-title-full" style={{ fontWeight: 700, fontSize: 15, color: C.emeraldDark }}>SMP Al-Irsyad Al-Islamiyyah Kota Cirebon</div>
+              <div className="app-topbar-title-short" style={{ fontWeight: 700, fontSize: 14, color: C.emeraldDark, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>SMS Al-Irsyad</div>
+              <div style={{ fontSize: 11, color: C.gray600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>Sistem Monitoring Siswa (SMS)</div>
             </div>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
             <div style={{ width: 34, height: 34, borderRadius: 99, background: C.emeraldLight, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, color: C.emeraldDark }}>
               {user.name[0]}
             </div>
@@ -738,13 +898,7 @@ const loadCatatan = async () => {
         </div>
 
         {/* Content */}
-        <div
-  style={{
-    flex: 1,
-    overflowY: "auto",
-    padding: isMobile ? 10 : 24
-  }}
->
+        <div className="app-content" style={{ flex: 1, overflowY: "auto", padding: 24 }}>
           <PageContent
             activeMenu={activeMenu}
             user={user}
@@ -1078,7 +1232,7 @@ const roleLabel = { admin: "Admin", kepsek: "Kepala Sekolah", bk: "Guru BK", kes
       </Card>
 
       {/* Stats */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 16, marginBottom: 24 }}>
+      <div className="grid-auto" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 16, marginBottom: 24 }}>
         <StatCard icon="👥" label="Total Siswa" value={totalSiswa} color={C.emerald} sub="Siswa aktif" />
         <StatCard icon="⚠️" label="Total Pelanggaran" value={totalPelanggaran} color={C.red} sub="Semua kelas" />
         <StatCard icon="🏆" label="Total Apresiasi" value={totalApresiasi} color={C.gold} sub="Semua siswa" />
@@ -1089,21 +1243,21 @@ const roleLabel = { admin: "Admin", kepsek: "Kepala Sekolah", bk: "Guru BK", kes
 <StatCard icon="⛔" label="Sangat Berat" value={kritis} color={C.red} sub=">270 poin" />      </div>
 
       {/* Charts Row */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginBottom: 24 }}>
-        <Card>
+      <div className="grid-2col" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginBottom: 24 }}>
+        <Card className="card-tight">
           <div style={{ fontWeight: 700, color: C.emeraldDark, marginBottom: 14 }}>📊 Setoran Hafalan per Kelas</div>
           <SimpleBar data={hafalanKelas} color={C.emerald} height={140} />
         </Card>
-        <Card>
+        <Card className="card-tight">
           <div style={{ fontWeight: 700, color: C.emeraldDark, marginBottom: 14 }}>🔤 Setoran Vocab per Kelas</div>
           <SimpleBar data={vocabKelas} color={C.gold} height={140} />
         </Card>
       </div>
 
       {/* Rankings */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 20, marginBottom: 24 }}>
+      <div className="grid-3col" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 20, marginBottom: 24 }}>
         {/* Top Hafalan Siswa */}
-        <Card>
+        <Card className="card-tight">
           <div style={{ fontWeight: 700, color: C.emeraldDark, marginBottom: 14 }}>🏅 Ranking Hafalan Terbanyak</div>
           {rankHafalan.map((r, i) => (
             <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
@@ -1115,7 +1269,7 @@ const roleLabel = { admin: "Admin", kepsek: "Kepala Sekolah", bk: "Guru BK", kes
         </Card>
 
         {/* Top Vocab Siswa */}
-        <Card>
+        <Card className="card-tight">
           <div style={{ fontWeight: 700, color: C.emeraldDark, marginBottom: 14 }}>🏅 Ranking Vocab Terbanyak</div>
           {rankVocab.map((r, i) => (
             <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
@@ -1127,7 +1281,7 @@ const roleLabel = { admin: "Admin", kepsek: "Kepala Sekolah", bk: "Guru BK", kes
         </Card>
 
         {/* Kelas Terbaik Pelanggaran (poin terendah) */}
-        <Card>
+        <Card className="card-tight">
           <div style={{ fontWeight: 700, color: C.emeraldDark, marginBottom: 14 }}>🏫 Kelas Poin Pelanggaran Terendah</div>
           {pelanggaranKelas.slice(0, 5).map((r, i) => (
             <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
@@ -1140,7 +1294,7 @@ const roleLabel = { admin: "Admin", kepsek: "Kepala Sekolah", bk: "Guru BK", kes
       </div>
 
       {/* Aktivitas Terbaru */}
-      <Card>
+      <Card className="card-tight">
         <div style={{ fontWeight: 700, color: C.emeraldDark, marginBottom: 14 }}>🕐 Aktivitas Terbaru</div>
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {[...pelanggaran.slice(-3).reverse().map(p => ({ icon: "⚠️", text: `${p.nama} (${p.kelas}) - ${p.jenis}`, tanggal: p.tanggal, color: C.red })),
@@ -1260,6 +1414,7 @@ const absensiAnak = absensi
   </div>
 
   <div
+  className="grid-2col"
   style={{
     display: "grid",
     gridTemplateColumns:
@@ -1272,7 +1427,7 @@ const absensiAnak = absensi
 </Card>
 
       {/* Profil anak */}
-      <Card style={{ marginBottom: 20 }}>
+      <Card className="card-tight" style={{ marginBottom: 20 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
           <div style={{ width: 64, height: 64, borderRadius: 99, background: C.emeraldLight, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 32 }}>
             {anak.jk === "L" ? "👦" : "👧"}
@@ -1287,14 +1442,14 @@ const absensiAnak = absensi
         </div>
       </Card>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 14, marginBottom: 20 }}>
+      <div className="grid-auto" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 14, marginBottom: 20 }}>
         <StatCard icon="📋" label="Kehadiran" value={`${hadir}/${totalAbsen}`} color={C.emerald} sub="hari hadir" />
         <StatCard icon="⚠️" label="Pelanggaran" value={pelanggaranAnak.length} color={C.red} sub={`${poin} poin akumulasi`} />
         <StatCard icon="🏆" label="Apresiasi" value={apresiasiAnak.length} color={C.gold} sub="prestasi diraih" />
         <StatCard icon="📖" label="Setoran Hafalan" value={hafalanAnak.length} color={C.blue} sub="total setoran" />
         <StatCard icon="🔤" label="Total Vocab" value={totalVocabSiswa(anak.nisn, vocab)} color={C.emeraldMid} sub="kata dikuasai" />
       </div>
-<Card style={{ marginBottom: 20 }}>
+<Card className="card-tight" style={{ marginBottom: 20 }}>
   <div style={{ fontWeight: 700, marginBottom: 12 }}>
     📊 Rekap Poin Karakter
   </div>
@@ -1318,8 +1473,8 @@ const absensiAnak = absensi
   </div>
 </Card>
       {/* Riwayat setoran */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginBottom: 20 }}>
-        <Card>
+      <div className="grid-2col" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginBottom: 20 }}>
+        <Card className="card-tight">
           <div style={{ fontWeight: 700, color: C.emeraldDark, marginBottom: 12 }}>📖 Riwayat Setoran Hafalan</div>
           {hafalanAnak.length === 0 ? <div style={{ color: C.gray600, fontSize: 13 }}>Belum ada setoran</div> :
             hafalanAnak.slice(-5).reverse().map((h, i) => (
@@ -1330,7 +1485,7 @@ const absensiAnak = absensi
             ))
           }
         </Card>
-        <Card>
+        <Card className="card-tight">
   <div style={{ fontWeight: 700, color: C.gold, marginBottom: 12 }}>
     🏆 Riwayat Apresiasi
   </div>
@@ -1364,7 +1519,7 @@ const absensiAnak = absensi
     ))
   )}
 </Card>
-        <Card>
+        <Card className="card-tight">
           <div style={{ fontWeight: 700, color: C.emeraldDark, marginBottom: 12 }}>⚠️ Riwayat Pelanggaran</div>
           {pelanggaranAnak.length === 0 ? <div style={{ color: C.emerald, fontSize: 13 }}>Alhamdulillah, tidak ada pelanggaran 🎉</div> :
             pelanggaranAnak.slice(-5).reverse().map((p, i) => (
@@ -1378,9 +1533,9 @@ const absensiAnak = absensi
       </div>
 
       {/* Grafik hafalan simple */}
-      <Card>
+      <Card className="card-tight">
         <div style={{ fontWeight: 700, color: C.emeraldDark, marginBottom: 14 }}>📈 Progress Hafalan & Vocab</div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+        <div className="grid-2col" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
           <div>
             <div style={{ fontSize: 13, color: C.gray600, marginBottom: 8 }}>Setoran per bulan (hafalan)</div>
             <SimpleBar
@@ -1524,7 +1679,7 @@ alert(JSON.stringify(error));
 };
   return (
     <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+      <div className="module-header">
         <div>
           <div style={{ fontWeight: 800, fontSize: 20, color: C.emeraldDark }}>👥 Data Siswa</div>
           <div style={{ color: C.gray600, fontSize: 13 }}>Total: {siswa.length} siswa</div>
@@ -1532,8 +1687,8 @@ alert(JSON.stringify(error));
         {canEdit && <Btn onClick={openAdd}>+ Tambah Siswa</Btn>}
       </div>
 
-      <Card style={{ marginBottom: 20 }}>
-        <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+      <Card className="card-tight" style={{ marginBottom: 20 }}>
+        <div className="filter-bar">
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="🔍 Cari nama / NISN..." style={{ flex: 1, minWidth: 200, border: `1.5px solid ${C.gray200}`, borderRadius: 8, padding: "8px 12px", fontSize: 14, outline: "none" }} />
           <select value={kelasFilter} onChange={e => setKelasFilter(e.target.value)} style={{ border: `1.5px solid ${C.gray200}`, borderRadius: 8, padding: "8px 12px", fontSize: 14, outline: "none" }}>
             <option value="">Semua Kelas</option>
@@ -1542,7 +1697,7 @@ alert(JSON.stringify(error));
         </div>
       </Card>
 
-      <Card>
+      <Card className="card-tight">
         <Table
           cols={["NISN", "Nama", "Kelas", "JK", "No. WA Ortu", "Status", "Aksi"]}
           rows={filtered}
@@ -1564,7 +1719,7 @@ alert(JSON.stringify(error));
       </Card>
 
       <Modal open={modal} onClose={() => setModal(false)} title={edit ? "Edit Data Siswa" : "Tambah Siswa Baru"}>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 16px" }}>
+        <div className="form-grid-2" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 16px" }}>
           <Input label="NISN" value={form.nisn} onChange={e => setForm(f => ({ ...f, nisn: e.target.value }))} />
           <Input label="NIPD" value={form.nipd} onChange={e => setForm(f => ({ ...f, nipd: e.target.value }))} />
           <div style={{ gridColumn: "1/-1" }}>
@@ -1598,7 +1753,6 @@ function ModulPelanggaran({ user, siswa, pelanggaran, setPelanggaran, apresiasi 
   const [searchSiswa, setSearchSiswa] = useState("");
   const [form, setForm] = useState({ nisn:"", kelas:"", jenis:"", kategori:"Ringan", poin:10, tanggal: new Date().toISOString().split("T")[0], guru: user.name });
   const [viewSP, setViewSP] = useState(null);
-  const isMobile = window.innerWidth <= 768;
   const canEdit = ["admin", "bk", "kesiswaan", "walas", "mapel", "kepsek"].includes(user.role);
   const filteredSiswa = siswa.filter(s => (searchSiswa === "" || s.nama.toLowerCase().includes(searchSiswa.toLowerCase())) && (kelasFilter === "" || s.kelas === kelasFilter));
 const [kategoriFilter, setKategoriFilter]= useState("");
@@ -1606,7 +1760,6 @@ const [kategoriFilter, setKategoriFilter]= useState("");
     (search === "" || p.nama?.toLowerCase().includes(search.toLowerCase()) || p.kelas?.includes(search)) && 
     (kelasFilter === "" || p.kelas === kelasFilter)
 ); 
-const [showAllTopPoin, setShowAllTopPoin] = useState(false);
   const handleJenisChange = (e) => {
     const j = JENIS_PELANGGARAN.find(jp => jp.nama === e.target.value);
     if (j) setForm(f => ({ ...f, jenis: j.nama, kategori: j.kategori, poin: j.poin }));
@@ -1717,24 +1870,21 @@ const handleEdit = (p) => {
   setModal(true);
 };
   // Top siswa poin tertinggi
-  const topPoin = siswa
-  .map(s => ({
-    ...s,
-    poin: getAkumulasiPoin(
-      s.nisn,
-      pelanggaran,
-      apresiasi
-    )
-  }))
-  .filter(s => s.poin > 0)
-  .sort((a, b) => b.poin - a.poin);
+  const topPoin = siswa.map(s => ({
+  ...s,
+  poin: getAkumulasiPoin(
+    s.nisn,
+    pelanggaran,
+    apresiasi
+  )
+}));
 
   // Grafik per kelas
   const kelasData = KELAS_LIST.slice(0, 8).map(k => ({ label: k, value: pelanggaran.filter(p => p.kelas === k).reduce((s, p) => s + p.poin, 0) }));
 
   return (
     <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+      <div className="module-header">
         <div>
           <div style={{ fontWeight: 800, fontSize: 20, color: C.emeraldDark }}>⚠️ Modul Pelanggaran</div>
 <p className="text-sm text-gray-500 mt-1">
@@ -1745,144 +1895,32 @@ const handleEdit = (p) => {
       </div>
 
       {/* Top Poin */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: 20, marginBottom: 20 }}>
-        <Card>
-  <div
-    style={{
-      display: "flex",
-      justifyContent: "space-between",
-      alignItems: "center",
-      marginBottom: 14
-    }}
-  >
-    <div
-      style={{
-        fontWeight: 800,
-        color: C.red,
-        fontSize: 16
-      }}
-    >
-      🚨 Top Poin Pelanggaran
-    </div>
-
-    <div
-      style={{
-        background: C.redLight,
-        color: C.red,
-        padding: "4px 10px",
-        borderRadius: 99,
-        fontSize: 11,
-        fontWeight: 700
-      }}
-    >
-      {topPoin.length} Siswa
-    </div>
-  </div>
-
-  {(showAllTopPoin ? topPoin : topPoin.slice(0, 5)).map((s, i) => {
-    const sp = getSP(s.poin);
-
-    return (
-      <div
-        key={s.nisn}
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 10,
-          padding: "8px 0",
-          borderBottom: `1px solid ${C.gray100}`
-        }}
-      >
-        <div
-          style={{
-            width: 28,
-            height: 28,
-            borderRadius: "50%",
-            background:
-              i === 0
-                ? "#fef2f2"
-                : i === 1
-                ? "#fff7ed"
-                : i === 2
-                ? "#fffbeb"
-                : C.gray50,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontWeight: 800,
-            fontSize: 12
-          }}
-        >
-          #{i + 1}
-        </div>
-
-        <div style={{ flex: 1 }}>
-          <div
-            style={{
-              fontWeight: 600,
-              fontSize: 13
-            }}
-          >
-            {s.nama}
-          </div>
-
-          <div
-            style={{
-              fontSize: 11,
-              color: C.gray600
-            }}
-          >
-            {s.kelas}
-          </div>
-        </div>
-
-        <div style={{ textAlign: "right" }}>
-          <div
-            style={{
-              fontWeight: 800,
-              color: C.red,
-              fontSize: 14
-            }}
-          >
-            {s.poin}
-          </div>
-
-          <div
-            style={{
-              fontSize: 10,
-              color: sp.color
-            }}
-          >
-            {sp.level}
-          </div>
-        </div>
-      </div>
-    );
-  })}
-
-  {topPoin.length > 5 && (
-    <div style={{ textAlign: "center", marginTop: 12 }}>
-      <Btn
-        small
-        variant="ghost"
-        onClick={() => setShowAllTopPoin(!showAllTopPoin)}
-      >
-        {showAllTopPoin
-          ? "⬆️ Sembunyikan"
-          : `📋 Lihat Selengkapnya (${topPoin.length - 5} lainnya)`}
-      </Btn>
-    </div>
-  )}
-</Card>
-        <Card>
+      <div className="grid-2col" style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: 20, marginBottom: 20 }}>
+        <Card className="card-tight">
+          <div style={{ fontWeight: 700, color: C.emeraldDark, marginBottom: 12 }}>🚨 Top Poin Tertinggi</div>
+          {topPoin.map((s, i) => {
+            const sp = getSP(s.poin);
+            return (
+              <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                <div style={{ width: 22, height: 22, borderRadius: 99, background: C.red + "22", color: C.red, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 11, flexShrink: 0 }}>{i + 1}</div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 12, fontWeight: 600 }}>{s.nama}</div>
+                  <div style={{ fontSize: 10, color: C.gray600 }}>{s.kelas}</div>
+                </div>
+                <span style={{ background: sp.bg, color: sp.color, padding: "2px 8px", borderRadius: 99, fontSize: 11, fontWeight: 700 }}>{s.poin}</span>
+              </div>
+            );
+          })}
+        </Card>
+        <Card className="card-tight">
           <div style={{ fontWeight: 700, color: C.emeraldDark, marginBottom: 12 }}>📊 Poin Pelanggaran per Kelas</div>
           <SimpleBar data={kelasData} color={C.red} height={120} />
         </Card>
       </div>
 
       {/* Filter + Tabel */}
-      <Card style={{ marginBottom: 14 }}>
-        <div style={{ display: "flex", gap: 12 }}>
+      <Card className="card-tight" style={{ marginBottom: 14 }}>
+        <div className="filter-bar">
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="🔍 Cari nama/kelas..." style={{ flex: 1, border: `1.5px solid ${C.gray200}`, borderRadius: 8, padding: "8px 12px", fontSize: 14, outline: "none" }} />
           <select value={kelasFilter} onChange={e => setKelasFilter(e.target.value)} style={{ border: `1.5px solid ${C.gray200}`, borderRadius: 8, padding: "8px 12px", fontSize: 14, outline: "none" }}>
             <option value="">Semua Kelas</option>
@@ -1891,7 +1929,7 @@ const handleEdit = (p) => {
         </div>
       </Card>
 
-      <Card>
+      <Card className="card-tight">
         <Table
           cols={["Tanggal", "Nama", "Kelas", "Jenis Pelanggaran", "Kategori", "Poin", "Guru", "Status", "Aksi"]}
           rows={filtered}
@@ -2042,7 +2080,7 @@ const handleEdit = (p) => {
       }))
   ]}
 />
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 16px" }}>
+        <div className="form-grid-2" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 16px" }}>
           <Input label="Kategori" value={form.kategori} readOnly style={{ background: C.gray50 }} />
           <Input label="Poin" type="number" value={form.poin} onChange={e => setForm(f => ({ ...f, poin: parseInt(e.target.value) || 0 }))} />
         </div>
@@ -2245,7 +2283,7 @@ const handleEditApresiasi = (a) => {
 };
 return (
     <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+      <div className="module-header">
         <div>
           <div style={{ fontWeight: 800, fontSize: 20, color: C.emeraldDark }}>🏆 Modul Apresiasi</div>
           <div style={{ color: C.gray600, fontSize: 13 }}>Apresiasi akan mengurangi akumulasi poin pelanggaran</div>
@@ -2254,13 +2292,13 @@ return (
       </div>
 
       {/* Stats apresiasi */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 14, marginBottom: 20 }}>
+      <div className="grid-auto" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 14, marginBottom: 20 }}>
         {JENIS_APRESIASI.slice(0, 4).map(j => (
           <StatCard key={j.id} icon="🏅" label={j.nama} value={apresiasi.filter(a => a.jenis === j.nama).length} color={C.gold} sub={`-${j.pengurangan} poin/apresiasi`} />
         ))}
       </div>
 
-      <Card>
+      <Card className="card-tight">
         <Table
           cols={["Tanggal", "Nama", "Kelas", "Jenis Apresiasi", "Pengurangan Poin", "Keterangan", "Guru", "Aksi"]}
           rows={apresiasi}
@@ -2459,7 +2497,7 @@ const handleDelete = async (id) => {
 
   return (
     <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+      <div className="module-header">
         <div>
           <div style={{ fontWeight: 800, fontSize: 20, color: C.emeraldDark }}>📖 Modul Qiroati</div>
           <div style={{ color: C.gray600, fontSize: 13 }}>Tahfidz • Tahsin • Jilid 1-4 • Tajwid Ghorib</div>
@@ -2487,19 +2525,19 @@ const handleDelete = async (id) => {
       </div>
 
       {/* Stats */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 14, marginBottom: 20 }}>
+      <div className="grid-auto" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 14, marginBottom: 20 }}>
         {TIPE_OPTIONS.map(t => (
           <StatCard key={t} icon={t.includes("Jilid") ? "📚" : t === "Tajwid Ghorib" ? "📜" : t === "Tahfidz" ? "📖" : "✍️"} label={t} value={hafalan.filter(h => h.tipe === t).length} color={C.emerald} sub="setoran" />
         ))}
       </div>
 
       {/* Charts + Rankings */}
-      <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr", gap: 20, marginBottom: 20 }}>
-        <Card>
+      <div className="grid-3col" style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr", gap: 20, marginBottom: 20 }}>
+        <Card className="card-tight">
           <div style={{ fontWeight: 700, color: C.emeraldDark, marginBottom: 12 }}>📊 Hafalan per Kelas</div>
           <SimpleBar data={hafalanKelas} color={C.emerald} height={130} />
         </Card>
-        <Card>
+        <Card className="card-tight">
           <div style={{ fontWeight: 700, color: C.emeraldDark, marginBottom: 12 }}>🏅 Top Hafalan</div>
           {rankHafalan.map((r, i) => (
             <div key={i} style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 7, fontSize: 12 }}>
@@ -2509,7 +2547,7 @@ const handleDelete = async (id) => {
             </div>
           ))}
         </Card>
-        <Card>
+        <Card className="card-tight">
           <div style={{ fontWeight: 700, color: C.emeraldDark, marginBottom: 12 }}>⭐ Paling Rajin Setor</div>
           {rankRajin.map((r, i) => (
             <div key={i} style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 7, fontSize: 12 }}>
@@ -2522,8 +2560,8 @@ const handleDelete = async (id) => {
       </div>
 
       {/* Filter + Tabel */}
-      <Card style={{ marginBottom: 14 }}>
-        <div style={{ display: "flex", gap: 12 }}>
+      <Card className="card-tight" style={{ marginBottom: 14 }}>
+        <div className="filter-bar">
           <select value={tipeFilter} onChange={e => setTipeFilter(e.target.value)} style={{ border: `1.5px solid ${C.gray200}`, borderRadius: 8, padding: "8px 12px", fontSize: 14, outline: "none" }}>
             <option value="">Semua Tipe</option>
             {TIPE_OPTIONS.map(t => <option key={t} value={t}>{t}</option>)}
@@ -2535,7 +2573,7 @@ const handleDelete = async (id) => {
         </div>
       </Card>
 
-      <Card>
+      <Card className="card-tight">
         <Table
           cols={["Tanggal", "Nama", "Kelas", "Tipe", "Capaian", "Kelancaran", "Status", "Aksi"]}
           rows={filtered}
@@ -2726,7 +2764,7 @@ const handleEdit = (data) => {
 };
   return (
     <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+      <div className="module-header">
         <div>
           <div style={{ fontWeight: 800, fontSize: 20, color: C.emeraldDark }}>🔤 Modul Vocab Bilingual</div>
           <div style={{ color: C.gray600, fontSize: 13 }}>Pantau setoran kosa kata Bahasa Inggris/Arab siswa</div>
@@ -2734,12 +2772,12 @@ const handleEdit = (data) => {
         {["admin", "bilingual", "walas"].includes(user.role) && <Btn onClick={() => { setForm({ nisn:"", kelas:"", tanggal: new Date().toISOString().split("T")[0], jumlah:0, keterangan:"", guru: user.name }); setSearchSiswa(""); setModal(true); }}>+ Input Vocab</Btn>}
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 20, marginBottom: 20 }}>
-        <Card>
+      <div className="grid-2col" style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 20, marginBottom: 20 }}>
+        <Card className="card-tight">
           <div style={{ fontWeight: 700, color: C.emeraldDark, marginBottom: 12 }}>📊 Total Vocab per Kelas</div>
           <SimpleBar data={vocabKelas} color={C.gold} height={130} />
         </Card>
-        <Card>
+        <Card className="card-tight">
           <div style={{ fontWeight: 700, color: C.emeraldDark, marginBottom: 12 }}>🏅 Top Vocab Siswa</div>
           {rankVocab.map((r, i) => (
             <div key={i} style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 7, fontSize: 12 }}>
@@ -2751,14 +2789,14 @@ const handleEdit = (data) => {
         </Card>
       </div>
 
-      <Card style={{ marginBottom: 14 }}>
+      <Card className="card-tight filter-bar" style={{ marginBottom: 14 }}>
         <select value={kelasFilter} onChange={e => setKelasFilter(e.target.value)} style={{ border: `1.5px solid ${C.gray200}`, borderRadius: 8, padding: "8px 12px", fontSize: 14, outline: "none" }}>
           <option value="">Semua Kelas</option>
           {KELAS_LIST.map(k => <option key={k} value={k}>{k}</option>)}
         </select>
       </Card>
 
-      <Card>
+      <Card className="card-tight">
         <Table
           cols={["Tanggal", "Nama", "Kelas", "Jumlah Vocab", "Keterangan", "Guru", "Aksi"]}
           rows={filtered}
@@ -3003,7 +3041,7 @@ const totalAlpa =
   riwayatSiswa.filter(a => a.status === "Alpa").length;
   return (
     <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+      <div className="module-header">
         <div>
           <div style={{ fontWeight: 800, fontSize: 20, color: C.emeraldDark }}>📋 Absensi Siswa</div>
           <div style={{ color: C.gray600, fontSize: 13 }}>Rekap kehadiran harian per kelas</div>
@@ -3011,20 +3049,20 @@ const totalAlpa =
         <Btn onClick={() => { initBulk(); setModal(true); }}>+ Input Absensi</Btn>
       </div>
 
-      <Card style={{ marginBottom: 20 }}>
-        <div style={{ display: "flex", gap: 12, marginBottom: 16 }}>
+      <Card className="card-tight" style={{ marginBottom: 20 }}>
+        <div className="filter-bar" style={{ marginBottom: 16 }}>
           <select value={kelasFilter} onChange={e => setKelasFilter(e.target.value)} style={{ border: `1.5px solid ${C.gray200}`, borderRadius: 8, padding: "8px 12px", fontSize: 14, outline: "none" }}>
             {KELAS_LIST.map(k => <option key={k} value={k}>{k}</option>)}
           </select>
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}>
+        <div className="grid-4col" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}>
           <StatCard icon="✅" label="Hadir" value={hadir} color={C.emerald} />
           <StatCard icon="🤒" label="Sakit" value={sakit} color={C.gold} />
           <StatCard icon="📝" label="Izin" value={izin} color={C.blue} />
           <StatCard icon="❌" label="Alpa" value={alpa} color={C.red} />
         </div>
       </Card>
-<Card style={{ marginBottom: 20 }}>
+<Card className="card-tight" style={{ marginBottom: 20 }}>
   <div
     style={{
       fontWeight: 700,
@@ -3078,7 +3116,7 @@ const totalAlpa =
     );
   })}
 </Card>
-<Card>
+<Card className="card-tight">
   <div style={{ fontWeight: 700, color: C.emeraldDark, marginBottom: 14 }}>
     Riwayat Absensi Kelas {kelasFilter}
   </div>
@@ -3277,11 +3315,10 @@ const totalAlpa =
         <div><b>Kelas:</b> {siswaRiwayat.kelas}</div>
 
         <div
+          className="grid-4col"
           style={{
             display: "grid",
-            gridTemplateColumns: isMobile
-  ? "1fr"
-  : "repeat(4,1fr)",
+            gridTemplateColumns: "repeat(4,1fr)",
             gap: 10,
             marginTop: 12
           }}
@@ -3466,14 +3503,7 @@ const handleDelete = async (id) => {
 
   return (
     <div>
-      <div
-  style={{
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 20
-  }}
->
+      <div className="module-header">
   <div>
     <div
       style={{
@@ -3515,8 +3545,8 @@ const handleDelete = async (id) => {
     + Tambah Catatan
   </Btn>
 </div>
-      <Card style={{ marginBottom: 14 }}>
-        <div style={{ display: "flex", gap: 12 }}>
+      <Card className="card-tight" style={{ marginBottom: 14 }}>
+        <div className="filter-bar">
           <select value={kelasFilter} onChange={e => setKelasFilter(e.target.value)} style={{ border: `1.5px solid ${C.gray200}`, borderRadius: 8, padding: "8px 12px", fontSize: 14, outline: "none" }}>
             <option value="">Semua Kelas</option>
             {KELAS_LIST.map(k => <option key={k} value={k}>{k}</option>)}
@@ -3524,7 +3554,7 @@ const handleDelete = async (id) => {
         </div>
       </Card>
 
-      <Card>
+      <Card className="card-tight">
         <Table
           cols={[
   "Tanggal",
@@ -3903,12 +3933,12 @@ const handleDeleteAll = async () => {
 };
   return (
     <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+      <div className="module-header">
         <div>
           <div style={{ fontWeight: 800, fontSize: 20, color: C.emeraldDark }}>👨‍🏫 Data Guru & Akun Login</div>
           <div style={{ color: C.gray600, fontSize: 13 }}>Kelola data guru dan akun login sistem</div>
         </div>
-        <div style={{ display: "flex", gap: 10 }}>
+        <div className="module-actions">
   <Btn
     variant="ghost"
     onClick={handleDeleteAll}
@@ -3937,7 +3967,7 @@ const handleDeleteAll = async () => {
   </Btn>
 </div>      </div>
 
-      <Card>
+      <Card className="card-tight">
         <Table
           cols={["NIP", "Nama", "Jabatan", "Kelas", "Username", "Status", "Aksi"]}
           rows={guru}
@@ -4220,28 +4250,7 @@ const downloadRekap = () => {
 
   return (
     <div>
-      <div style={{ display: "flex", gap: 10 }}>
-  <Btn onClick={exportExcelLengkap}>
-    📥 Excel Lengkap
-  </Btn>
-
-  <Btn
-    variant="ghost"
-    onClick={downloadRekap}
-  >
-    📄 CSV Rekap
-  </Btn>
-</div>
-<div
-  style={{
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 20,
-    flexWrap: "wrap",
-    gap: 10
-  }}
->
+      <div className="module-header">
   <div
     style={{
       fontWeight: 800,
@@ -4252,7 +4261,7 @@ const downloadRekap = () => {
     📊 Laporan & Rekap
   </div>
 
-  <div style={{ display: "flex", gap: 10 }}>
+  <div className="module-actions">
     <Btn onClick={exportExcelLengkap}>
       📥 Excel Lengkap
     </Btn>
@@ -4266,7 +4275,7 @@ const downloadRekap = () => {
   </div>
 </div>
       {/* Tab nav */}
-      <div style={{ display: "flex", gap: 4, marginBottom: 20, flexWrap: "wrap" }}>
+      <div className="tab-scroll" style={{ display: "flex", gap: 4, marginBottom: 20, flexWrap: "wrap" }}>
         {tabs.map(t => (
           <button key={t.key} onClick={() => setTab(t.key)}
             style={{ padding: "8px 16px", borderRadius: 8, border: "none", cursor: "pointer", fontWeight: tab === t.key ? 700 : 400, background: tab === t.key ? C.emerald : C.gray100, color: tab === t.key ? C.white : C.gray700, fontSize: 13 }}>
@@ -4277,13 +4286,13 @@ const downloadRekap = () => {
 
       {tab === "pelanggaran" && (
         <div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 14, marginBottom: 20 }}>
+          <div className="grid-auto" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 14, marginBottom: 20 }}>
             <StatCard icon="⚠️" label="Total Pelanggaran" value={pelanggaran.length} color={C.red} />
             <StatCard icon="📋" label="SP1 (90)" value={spSummary.filter(s => s.poin >= 90 && s.poin < 179).length} color={C.red} />
             <StatCard icon="🟡" label="SP2 (180)" value={spSummary.filter(s => s.poin >= 180 && s.poin < 269).length} color={C.red} />
             <StatCard icon="🔴" label="SP3 / Kritis (270)" value={spSummary.filter(s => s.poin >= 270).length} color={C.red} />
           </div>
-          <Card>
+          <Card className="card-tight">
   <div
     style={{
       fontWeight: 700,
@@ -4386,11 +4395,11 @@ const downloadRekap = () => {
 
       {tab === "hafalan" && (
         <div>
-          <Card style={{ marginBottom: 20 }}>
+          <Card className="card-tight" style={{ marginBottom: 20 }}>
             <div style={{ fontWeight: 700, color: C.emeraldDark, marginBottom: 14 }}>📊 Rekap Hafalan per Kelas</div>
             <SimpleBar data={KELAS_LIST.slice(0, 8).map(k => ({ label: k, value: hafalan.filter(h => h.kelas === k && h.status === "Lulus").length }))} color={C.emerald} height={150} />
           </Card>
-          <Card>
+          <Card className="card-tight">
             <div style={{ fontWeight: 700, color: C.emeraldDark, marginBottom: 14 }}>Tabel Setoran Hafalan</div>
             <Table
               cols={["Tanggal", "Nama", "Kelas", "Tipe", "Capaian", "Status"]}
@@ -4410,11 +4419,11 @@ const downloadRekap = () => {
 
       {tab === "vocab" && (
         <div>
-          <Card style={{ marginBottom: 20 }}>
+          <Card className="card-tight" style={{ marginBottom: 20 }}>
             <div style={{ fontWeight: 700, color: C.emeraldDark, marginBottom: 14 }}>📊 Rekap Vocab per Kelas</div>
             <SimpleBar data={KELAS_LIST.slice(0, 8).map(k => ({ label: k, value: vocab.filter(v => v.kelas === k).reduce((s, v) => s + v.jumlah, 0) }))} color={C.gold} height={150} />
           </Card>
-          <Card>
+          <Card className="card-tight">
             <div style={{ fontWeight: 700, color: C.emeraldDark, marginBottom: 14 }}>Ranking Vocab Siswa</div>
             <Table
               cols={["Rank", "Nama", "Kelas", "Total Vocab"]}
@@ -4431,7 +4440,7 @@ const downloadRekap = () => {
       )}
 
       {tab === "catatan" && (
-        <Card>
+        <Card className="card-tight">
           <div style={{ fontWeight: 700, color: C.emeraldDark, marginBottom: 14 }}>📝 Catatan Kejadian Seluruh Kelas</div>
           <Table
             cols={["Tanggal", "Nama", "Kelas", "Catatan", "Tindak Lanjut", "Guru"]}
@@ -4450,11 +4459,11 @@ const downloadRekap = () => {
 
       {tab === "absensi" && (
         <div>
-          <Card style={{ marginBottom: 20 }}>
+          <Card className="card-tight" style={{ marginBottom: 20 }}>
             <div style={{ fontWeight: 700, color: C.emeraldDark, marginBottom: 14 }}>📊 Rekap Kehadiran per Kelas</div>
             <SimpleBar data={KELAS_LIST.slice(0, 8).map(k => ({ label: k, value: absensi.filter(a => a.kelas === k && a.status === "Hadir").length }))} color={C.emerald} height={130} />
           </Card>
-          <Card>
+          <Card className="card-tight">
             <Table
               cols={["Tanggal", "Nama", "Kelas", "Status"]}
               rows={absensi.slice().reverse()}
@@ -4475,7 +4484,7 @@ const downloadRekap = () => {
       )}
 
       {tab === "rekap" && (
-  <Card>
+  <Card className="card-tight">
     <div
       style={{
         fontWeight: 700,
