@@ -1172,65 +1172,55 @@ function PageContent(props) {
   return <div style={{ padding: 40, textAlign: "center", color: C.gray600 }}>Halaman tidak ditemukan</div>;
 }
 
-function DashboardUtama({ user, siswa, pelanggaran, apresiasi, hafalan, vocab, catatan, greeting }) {
-  const [showAllHafalan, setShowAllHafalan] = React.useState(false);
-  const [showAllVocab, setShowAllVocab] = React.useState(false);
-  const [showAllPelKelas, setShowAllPelKelas] = React.useState(false);
+// ===================== DASHBOARD UTAMA =====================
 
+function DashboardUtama({ user, siswa, pelanggaran, apresiasi, hafalan, vocab, catatan, greeting }) {
   const totalSiswa = siswa.length;
   const totalPelanggaran = pelanggaran.length;
   const totalApresiasi = apresiasi.length;
   const totalHafalan = hafalan.length;
 
-  // Ranking hafalan (full list, tidak dipotong di sini)
-  const rankHafalanFull = siswa
-    .map(s => ({ nama: s.nama, kelas: s.kelas, total: totalHafalanSiswa(s.nisn, hafalan) }))
-    .sort((a, b) => b.total - a.total);
-  const rankHafalan = showAllHafalan ? rankHafalanFull : rankHafalanFull.slice(0, 5);
-
-  // Ranking vocab (full list, tidak dipotong di sini)
-  const rankVocabFull = siswa
-    .map(s => ({ nama: s.nama, kelas: s.kelas, total: totalVocabSiswa(s.nisn, vocab) }))
-    .sort((a, b) => b.total - a.total);
-  const rankVocab = showAllVocab ? rankVocabFull : rankVocabFull.slice(0, 5);
-
-  // Ranking pelanggaran per kelas (full list)
-  const pelanggaranKelasFull = KELAS_LIST
-    .map(k => ({ label: k, value: pelanggaran.filter(p => p.kelas === k).reduce((s, p) => s + p.poin, 0) }))
-    .sort((a, b) => a.value - b.value);
-  const pelanggaranKelas = showAllPelKelas ? pelanggaranKelasFull : pelanggaranKelasFull.slice(0, 5);
-
+  // Ranking hafalan
+  const rankHafalan = siswa.map(s => ({ nama: s.nama, kelas: s.kelas, total: totalHafalanSiswa(s.nisn, hafalan) })).sort((a, b) => b.total - a.total).slice(0, 5);
+  // Ranking vocab
+  const rankVocab = siswa.map(s => ({ nama: s.nama, kelas: s.kelas, total: totalVocabSiswa(s.nisn, vocab) })).sort((a, b) => b.total - a.total).slice(0, 5);
+  // Ranking pelanggaran per kelas
+  const pelanggaranKelas = KELAS_LIST.map(k => ({ label: k, value: pelanggaran.filter(p => p.kelas === k).reduce((s, p) => s + p.poin, 0) })).sort((a, b) => a.value - b.value);
   // Hafalan per kelas
   const hafalanKelas = KELAS_LIST.slice(0, 6).map(k => ({ label: k, value: hafalan.filter(h => siswa.find(s => s.nisn === h.nisn && s.kelas === k)).length }));
   // Vocab per kelas
   const vocabKelas = KELAS_LIST.slice(0, 6).map(k => ({ label: k, value: vocab.filter(v => siswa.find(s => s.nisn === v.nisn && s.kelas === k)).reduce((s, v) => s + v.jumlah, 0) }));
 
-  const dataSP = siswa.map(s => ({
-    ...s,
-    poin: getAkumulasiPoin(s.nisn, pelanggaran, apresiasi)
-  }));
+const dataSP = siswa.map(s => ({
+  ...s,
+  poin: getAkumulasiPoin(
+    s.nisn,
+    pelanggaran,
+    apresiasi
+  )
+}));
 
-  const sp1 = dataSP.filter(s => getSP(s.poin).level === "Pelanggaran Berat (SP1)").length;
-  const sp2 = dataSP.filter(s => getSP(s.poin).level === "Pelanggaran Berat (SP2)").length;
-  const sp3 = dataSP.filter(s => getSP(s.poin).level === "Pelanggaran Berat (SP3)").length;
-  const kritis = dataSP.filter(s => getSP(s.poin).level === "Pelanggaran Sangat Berat").length;
+console.log(dataSP);
+console.log("DATA SP", dataSP.slice(0, 5));
+console.log("PELANGGARAN", pelanggaran[0]);
+console.log("APRESIASI", apresiasi[0]);
+const sp1 = dataSP.filter(
+  s => getSP(s.poin).level === "Pelanggaran Berat (SP1)"
+).length;
 
-  const roleLabel = { admin: "Admin", kepsek: "Kepala Sekolah", bk: "Guru BK", kesiswaan: "Kesiswaan", walas: "Wali Kelas", qiroati: "Guru Qiroati", bilingual: "PJ Bilingual" };
+const sp2 = dataSP.filter(
+  s => getSP(s.poin).level === "Pelanggaran Berat (SP2)"
+).length;
 
-  // Style tombol toggle reusable
-  const toggleBtnStyle = {
-    width: "100%",
-    marginTop: 10,
-    padding: "8px 0",
-    borderRadius: 8,
-    border: `1px solid ${C.gray200 || "#e5e7eb"}`,
-    background: C.gray50,
-    color: C.emeraldDark,
-    fontSize: 12,
-    fontWeight: 600,
-    cursor: "pointer",
-    textAlign: "center"
-  };
+const sp3 = dataSP.filter(
+  s => getSP(s.poin).level === "Pelanggaran Berat (SP3)"
+).length;
+
+const kritis = dataSP.filter(
+  s => getSP(s.poin).level === "Pelanggaran Sangat Berat"
+).length;
+
+const roleLabel = { admin: "Admin", kepsek: "Kepala Sekolah", bk: "Guru BK", kesiswaan: "Kesiswaan", walas: "Wali Kelas", qiroati: "Guru Qiroati", bilingual: "PJ Bilingual" };
 
   return (
     <div>
@@ -1247,11 +1237,10 @@ function DashboardUtama({ user, siswa, pelanggaran, apresiasi, hafalan, vocab, c
         <StatCard icon="⚠️" label="Total Pelanggaran" value={totalPelanggaran} color={C.red} sub="Semua kelas" />
         <StatCard icon="🏆" label="Total Apresiasi" value={totalApresiasi} color={C.gold} sub="Semua siswa" />
         <StatCard icon="📖" label="Setoran Hafalan" value={totalHafalan} color={C.blue} sub="Total setoran" />
-        <StatCard icon="📋" label="SP1" value={sp1} color={C.red} sub="90-179 poin" />
-        <StatCard icon="🔴" label="SP2" value={sp2} color={C.red} sub="180-269 poin" />
-        <StatCard icon="🚨" label="SP3" value={sp3} color={C.red} sub="270 poin" />
-        <StatCard icon="⛔" label="Sangat Berat" value={kritis} color={C.red} sub=">270 poin" />
-      </div>
+<StatCard icon="📋" label="SP1" value={sp1} color={C.red} sub="90-179 poin" />
+<StatCard icon="🔴" label="SP2" value={sp2} color={C.red} sub="180-269 poin" />
+<StatCard icon="🚨" label="SP3" value={sp3} color={C.red} sub="270 poin" />
+<StatCard icon="⛔" label="Sangat Berat" value={kritis} color={C.red} sub=">270 poin" />      </div>
 
       {/* Charts Row */}
       <div className="grid-2col" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginBottom: 24 }}>
@@ -1277,11 +1266,6 @@ function DashboardUtama({ user, siswa, pelanggaran, apresiasi, hafalan, vocab, c
               <Badge color={C.emeraldDark} bg={C.emeraldLight}>{r.total} setoran</Badge>
             </div>
           ))}
-          {rankHafalanFull.length > 5 && (
-            <button style={toggleBtnStyle} onClick={() => setShowAllHafalan(v => !v)}>
-              {showAllHafalan ? "Sembunyikan ▲" : `Lihat Selengkapnya (${rankHafalanFull.length}) ▼`}
-            </button>
-          )}
         </Card>
 
         {/* Top Vocab Siswa */}
@@ -1294,28 +1278,18 @@ function DashboardUtama({ user, siswa, pelanggaran, apresiasi, hafalan, vocab, c
               <Badge color={C.gold} bg={C.goldLight}>{r.total} kata</Badge>
             </div>
           ))}
-          {rankVocabFull.length > 5 && (
-            <button style={toggleBtnStyle} onClick={() => setShowAllVocab(v => !v)}>
-              {showAllVocab ? "Sembunyikan ▲" : `Lihat Selengkapnya (${rankVocabFull.length}) ▼`}
-            </button>
-          )}
         </Card>
 
         {/* Kelas Terbaik Pelanggaran (poin terendah) */}
         <Card className="card-tight">
           <div style={{ fontWeight: 700, color: C.emeraldDark, marginBottom: 14 }}>🏫 Kelas Poin Pelanggaran Terendah</div>
-          {pelanggaranKelas.map((r, i) => (
+          {pelanggaranKelas.slice(0, 5).map((r, i) => (
             <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
               <div style={{ width: 26, height: 26, borderRadius: 99, background: i < 3 ? C.emerald : C.gray100, color: i < 3 ? C.white : C.gray700, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 12, flexShrink: 0 }}>{i + 1}</div>
               <div style={{ flex: 1, fontSize: 13, fontWeight: 600 }}>{r.label}</div>
               <Badge color={r.value === 0 ? C.emeraldDark : C.red} bg={r.value === 0 ? C.emeraldLight : C.redLight}>{r.value} poin</Badge>
             </div>
           ))}
-          {pelanggaranKelasFull.length > 5 && (
-            <button style={toggleBtnStyle} onClick={() => setShowAllPelKelas(v => !v)}>
-              {showAllPelKelas ? "Sembunyikan ▲" : `Lihat Selengkapnya (${pelanggaranKelasFull.length}) ▼`}
-            </button>
-          )}
         </Card>
       </div>
 
@@ -1338,6 +1312,7 @@ function DashboardUtama({ user, siswa, pelanggaran, apresiasi, hafalan, vocab, c
     </div>
   );
 }
+
 // ===================== DASHBOARD ORANG TUA =====================
 function DashboardOrtu({ user, siswa, pelanggaran, apresiasi, hafalan, vocab, absensi }) {
   console.log("USER DASHBOARD ORTU:", user);
