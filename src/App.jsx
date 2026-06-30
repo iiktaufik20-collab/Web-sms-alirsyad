@@ -4135,11 +4135,18 @@ const handleDeleteAll = async () => {
           onChange={(e) => setForm((f) => ({ ...f, jabatan: e.target.value }))}
           options={[
             { value: "Guru", label: "Guru" },
+            { value: "Kepala Sekolah", label: "Kepala Sekolah" },
+            { value: "Sapras", label: "Sapras" },
+             { value: "Guru Mapel", label: "Guru Mapel" },
             { value: "Wali Kelas", label: "Wali Kelas" },
             { value: "Guru BK", label: "Guru BK" },
             { value: "Guru Qiroati", label: "Guru Qiroati" },
             { value: "PJ Bilingual", label: "PJ Bilingual" },
-            { value: "Kesiswaan", label: "Kesiswaan" },
+            { value: "Waka Kesiswaan", label: "Waka Kesiswaan" },
+            { value: "Waka Kurikulum", label: "Waka Kurikulum" },
+            { value: "Staf TU", label: "Staf TU" },
+            { value: "Bendahara", label: "Bendahara" },
+            { value: "K5", label: "K5" },
           ]}
         />
         {form.jabatan === "Wali Kelas" && (
