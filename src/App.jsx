@@ -612,29 +612,24 @@ const MENUS = {
   ],
   kepsek: [
     { key: "dashboard", icon: "🏠", label: "Dashboard" },
-    { key: "siswa", icon: "👥", label: "Data Siswa" },
     { key: "pelanggaran", icon: "⚠️", label: "Pelanggaran" },
     { key: "catatan", icon: "📝", label: "Catatan Kejadian" },
     { key: "apresiasi", icon: "🏆", label: "Apresiasi" },
-    { key: "absensi", icon: "📋", label: "Absensi" },
     { key: "vocab", icon: "📘", label: "Vocab" },
     { key: "qiroati", icon: "📖", label: "Qiroati" },
     { key: "laporan", icon: "📊", label: "Laporan" },
   ],
   bk: [
     { key: "dashboard", icon: "🏠", label: "Dashboard" },
-    { key: "siswa", icon: "👥", label: "Data Siswa" },
     { key: "pelanggaran", icon: "⚠️", label: "Pelanggaran" },
     { key: "catatan", icon: "📝", label: "Catatan Kejadian" },
     { key: "apresiasi", icon: "🏆", label: "Apresiasi" },
-    { key: "absensi", icon: "📋", label: "Absensi" },
     { key: "vocab", icon: "📘", label: "Vocab" },
     { key: "qiroati", icon: "📖", label: "Qiroati" },
     { key: "laporan", icon: "📊", label: "Laporan" },
   ],
   kesiswaan: [
     { key: "dashboard", icon: "🏠", label: "Dashboard" },
-    { key: "siswa", icon: "👥", label: "Data Siswa" },
     { key: "pelanggaran", icon: "⚠️", label: "Pelanggaran" },
     { key: "catatan", icon: "📝", label: "Catatan Kejadian" },
     { key: "apresiasi", icon: "🏆", label: "Apresiasi" },
@@ -646,7 +641,6 @@ const MENUS = {
   // === BERIKUT ROLE BARU TAMBAHAN KITA ===
   walas: [
     { key: "dashboard", icon: "🏠", label: "Dashboard" },
-    { key: "siswa", icon: "👥", label: "Data Siswa" },
     { key: "pelanggaran", icon: "⚠️", label: "Pelanggaran" },
     { key: "catatan", icon: "📝", label: "Catatan Kejadian" },
     { key: "apresiasi", icon: "🏆", label: "Apresiasi" },
@@ -657,16 +651,21 @@ const MENUS = {
   ],
   guru_mapel: [
     { key: "dashboard", icon: "🏠", label: "Dashboard" },
-    { key: "siswa", icon: "👥", label: "Data Siswa" },
     { key: "pelanggaran", icon: "⚠️", label: "Pelanggaran" },
     { key: "catatan", icon: "📝", label: "Catatan Kejadian" },
     { key: "apresiasi", icon: "🏆", label: "Apresiasi" },
-    { key: "absensi", icon: "📋", label: "Absensi" },
+  ],
+  qiroati: [
+    { key: "dashboard", icon: "🏠", label: "Dashboard" },
+    { key: "qiroati", icon: "📖", label: "Qiroati" },
+    { key: "pelanggaran", icon: "⚠️", label: "Pelanggaran" },
+    { key: "apresiasi", icon: "🏆", label: "Apresiasi" },
+    { key: "catatan", icon: "📝", label: "Catatan Kejadian" },
+    { key: "laporan", icon: "📊", label: "Laporan" },
   ],
   bilingual: [
     { key: "dashboard", icon: "🏠", label: "Dashboard" },
     { key: "guru", icon: "👨‍🏫", label: "Data Guru" },
-    { key: "siswa", icon: "👥", label: "Data Siswa" },
     { key: "vocab", icon: "📘", label: "Vocab" },
     { key: "apresiasi", icon: "🏆", label: "Apresiasi" },
     { key: "laporan", icon: "📊", label: "Laporan" },
@@ -1023,6 +1022,10 @@ console.log("error:",error)
           detectedRole = 'walas'; 
           const kelas = detectedUsername.replace('walas', '').toUpperCase();
           displayName = `Wali Kelas ${kelas}`;
+        } else if (detectedUsername === 'qiroati') {
+          // Guru Qiroati (khusus, HARUS dicek sebelum aturan "guru" umum di bawah)
+          detectedRole = 'qiroati';
+          displayName = 'Guru Qiroati';
         } else if (detectedUsername.startsWith('guru')) {
           detectedRole = 'guru_mapel';
           displayName = 'Guru Mapel';
@@ -1184,13 +1187,35 @@ function PageContent(props) {
     if (role === "ortu") return <DashboardOrtu {...props} />;
     return <DashboardUtama {...props} greeting={greeting()} />;
   }
-  if (activeMenu === "siswa") return <ModulSiswa {...props} />;
+  if (activeMenu === "siswa") {
+    // Proteksi tambahan: Data Siswa hanya untuk role admin,
+    // walaupun activeMenu di-set manual (bukan lewat klik sidebar).
+    if (user.role !== "admin") {
+      return (
+        <div style={{ padding: 40, textAlign: "center", color: C.gray600 }}>
+          Anda tidak memiliki akses ke halaman Data Siswa. Hubungi Admin.
+        </div>
+      );
+    }
+    return <ModulSiswa {...props} />;
+  }
   if (activeMenu === "guru") return <ModulGuru {...props} />;
   if (activeMenu === "pelanggaran") return <ModulPelanggaran {...props} />;
   if (activeMenu === "apresiasi") return <ModulApresiasi {...props} />;
   if (activeMenu === "qiroati") return <ModulQiroati {...props} />;
   if (activeMenu === "vocab") return <ModulVocab {...props} />;
-  if (activeMenu === "absensi") return <ModulAbsensi {...props} />;
+  if (activeMenu === "absensi") {
+    // Proteksi tambahan: Absensi hanya untuk admin, kesiswaan, dan wali kelas,
+    // walaupun activeMenu di-set manual (bukan lewat klik sidebar).
+    if (!["admin", "kesiswaan", "walas"].includes(user.role)) {
+      return (
+        <div style={{ padding: 40, textAlign: "center", color: C.gray600 }}>
+          Anda tidak memiliki akses ke halaman Absensi. Hubungi Admin.
+        </div>
+      );
+    }
+    return <ModulAbsensi {...props} />;
+  }
   if (activeMenu === "catatan") return <ModulCatatan {...props} />;
   if (activeMenu === "laporan") return <ModulLaporan {...props} />;
   return <div style={{ padding: 40, textAlign: "center", color: C.gray600 }}>Halaman tidak ditemukan</div>;
@@ -1788,7 +1813,7 @@ function ModulPelanggaran({ user, siswa, pelanggaran, setPelanggaran, apresiasi 
   const [searchSiswa, setSearchSiswa] = useState("");
   const [form, setForm] = useState({ nisn:"", kelas:"", jenis:"", kategori:"Ringan", poin:10, tanggal: new Date().toISOString().split("T")[0], guru: user.name });
   const [viewSP, setViewSP] = useState(null);
-  const canEdit = ["admin", "bk", "kesiswaan", "walas", "mapel", "kepsek"].includes(user.role);
+  const canEdit = ["admin", "bk", "kesiswaan", "walas", "mapel", "kepsek", "qiroati"].includes(user.role);
   const filteredSiswa = siswa.filter(s => (searchSiswa === "" || s.nama.toLowerCase().includes(searchSiswa.toLowerCase())) && (kelasFilter === "" || s.kelas === kelasFilter));
 const [kategoriFilter, setKategoriFilter]= useState("");
   const filtered = pelanggaran.filter(p => 
@@ -4135,18 +4160,11 @@ const handleDeleteAll = async () => {
           onChange={(e) => setForm((f) => ({ ...f, jabatan: e.target.value }))}
           options={[
             { value: "Guru", label: "Guru" },
-            { value: "Kepala Sekolah", label: "Kepala Sekolah" },
-            { value: "Sapras", label: "Sapras" },
-             { value: "Guru Mapel", label: "Guru Mapel" },
             { value: "Wali Kelas", label: "Wali Kelas" },
             { value: "Guru BK", label: "Guru BK" },
             { value: "Guru Qiroati", label: "Guru Qiroati" },
             { value: "PJ Bilingual", label: "PJ Bilingual" },
-            { value: "Waka Kesiswaan", label: "Waka Kesiswaan" },
-            { value: "Waka Kurikulum", label: "Waka Kurikulum" },
-            { value: "Staf TU", label: "Staf TU" },
-            { value: "Bendahara", label: "Bendahara" },
-            { value: "K5", label: "K5" },
+            { value: "Kesiswaan", label: "Kesiswaan" },
           ]}
         />
         {form.jabatan === "Wali Kelas" && (
