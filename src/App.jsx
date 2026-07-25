@@ -1244,9 +1244,9 @@ function DashboardUtama({ user, siswa, pelanggaran, apresiasi, hafalan, vocab, c
   const pelanggaranKelasAll = KELAS_LIST.map(k => ({ label: k, value: pelanggaran.filter(p => p.kelas === k).reduce((s, p) => s + p.poin, 0) })).sort((a, b) => a.value - b.value);
   const pelanggaranKelas = showAllPelanggaranKelas ? pelanggaranKelasAll : pelanggaranKelasAll.slice(0, RANK_PREVIEW_COUNT);
   // Hafalan per kelas
-  const hafalanKelas = KELAS_LIST.slice(0, 6).map(k => ({ label: k, value: hafalan.filter(h => siswa.find(s => s.nisn === h.nisn && s.kelas === k)).length }));
+  const hafalanKelas = KELAS_LIST.slice(0, 12).map(k => ({ label: k, value: hafalan.filter(h => siswa.find(s => s.nisn === h.nisn && s.kelas === k)).length }));
   // Vocab per kelas
-  const vocabKelas = KELAS_LIST.slice(0, 6).map(k => ({ label: k, value: vocab.filter(v => siswa.find(s => s.nisn === v.nisn && s.kelas === k)).reduce((s, v) => s + v.jumlah, 0) }));
+  const vocabKelas = KELAS_LIST.slice(0, 12).map(k => ({ label: k, value: vocab.filter(v => siswa.find(s => s.nisn === v.nisn && s.kelas === k)).reduce((s, v) => s + v.jumlah, 0) }));
 
 const dataSP = siswa.map(s => ({
   ...s,
@@ -1816,10 +1816,22 @@ function ModulPelanggaran({ user, siswa, pelanggaran, setPelanggaran, apresiasi 
   const canEdit = ["admin", "bk", "kesiswaan", "walas", "mapel", "kepsek", "qiroati"].includes(user.role);
   const filteredSiswa = siswa.filter(s => (searchSiswa === "" || s.nama.toLowerCase().includes(searchSiswa.toLowerCase())) && (kelasFilter === "" || s.kelas === kelasFilter));
 const [kategoriFilter, setKategoriFilter]= useState("");
-  const filtered = pelanggaran.filter(p => 
-    (search === "" || p.nama?.toLowerCase().includes(search.toLowerCase()) || p.kelas?.includes(search)) && 
+ const filtered = pelanggaran
+  .filter(p =>
+    (search === "" ||
+      p.nama?.toLowerCase().includes(search.toLowerCase()) ||
+      p.kelas?.includes(search)) &&
     (kelasFilter === "" || p.kelas === kelasFilter)
-); 
+  )
+  .sort((a, b) => {
+    // urutkan berdasarkan tanggal terbaru
+    const tanggal = new Date(b.tanggal) - new Date(a.tanggal);
+
+    // jika tanggal sama, gunakan id terbesar di atas
+    if (tanggal !== 0) return tanggal;
+
+    return b.id - a.id;
+  }); 
   const [showAllTabelPelanggaran, setShowAllTabelPelanggaran] = useState(false);
   const TABEL_PREVIEW_COUNT = 10;
   const filteredVisible = showAllTabelPelanggaran ? filtered : filtered.slice(0, TABEL_PREVIEW_COUNT);
@@ -1946,7 +1958,7 @@ const handleEdit = (p) => {
   const topPoinVisible = showAllTopPoin ? topPoin : topPoin.slice(0, TOP_POIN_PREVIEW_COUNT);
 
   // Grafik per kelas
-  const kelasData = KELAS_LIST.slice(0, 8).map(k => ({ label: k, value: pelanggaran.filter(p => p.kelas === k).reduce((s, p) => s + p.poin, 0) }));
+  const kelasData = KELAS_LIST.slice(0, 12).map(k => ({ label: k, value: pelanggaran.filter(p => p.kelas === k).reduce((s, p) => s + p.poin, 0) }));
 
   // Data panduan alur & tindak lanjut (dipisah biar bisa di-collapse)
   const panduanList = [
