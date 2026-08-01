@@ -1813,7 +1813,9 @@ function ModulPelanggaran({ user, siswa, pelanggaran, setPelanggaran, apresiasi 
   const [searchSiswa, setSearchSiswa] = useState("");
   const [form, setForm] = useState({ nisn:"", kelas:"", jenis:"", kategori:"Ringan", poin:10, tanggal: new Date().toISOString().split("T")[0], guru: user.name });
   const [viewSP, setViewSP] = useState(null);
-  const canEdit = ["admin", "bk", "kesiswaan", "walas", "mapel", "kepsek", "qiroati"].includes(user.role);
+  console.log(user);
+console.log(user.role);
+  const canEdit = ["admin", "bk", "kesiswaan", "walas", "guru_mapel", "kepsek", "qiroati"].includes(user.role);
   const filteredSiswa = siswa.filter(s => (searchSiswa === "" || s.nama.toLowerCase().includes(searchSiswa.toLowerCase())) && (kelasFilter === "" || s.kelas === kelasFilter));
 const [kategoriFilter, setKategoriFilter]= useState("");
  const filtered = pelanggaran
@@ -2331,7 +2333,7 @@ function ModulApresiasi({ user, siswa, pelanggaran, apresiasi, setApresiasi }) {
   const APRESIASI_PREVIEW_COUNT = 10;
   const apresiasiVisible = showAllApresiasi ? apresiasi : apresiasi.slice(0, APRESIASI_PREVIEW_COUNT);
 
-  const canEdit = ["admin", "bk", "kesiswaan", "walas", "kepsek", "qiroati"].includes(user.role);
+  const canEdit = ["admin", "bk", "kesiswaan", "walas", "kepsek", "guru_mapel", "qiroati"].includes(user.role);
   const filteredSiswa = siswa.filter(s => (form.kelas === "" || s.kelas === form.kelas) && (searchSiswa === "" || s.nama.toLowerCase().includes(searchSiswa.toLowerCase())));
 
   const handleSiswaSelect = (s) => { setForm(f => ({ ...f, nisn: s.nisn, kelas: s.kelas })); setSearchSiswa(s.nama); };
