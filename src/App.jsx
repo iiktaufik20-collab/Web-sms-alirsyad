@@ -312,15 +312,16 @@ const JENIS_PELANGGARAN = [
 ];
 
   const JENIS_APRESIASI = [
-  { id:1, nama:"Juara Kecamatan", pengurangan:20 },
-  { id:2, nama:"Juara Kota", pengurangan:30 },
-  { id:3, nama:"Juara Provinsi", pengurangan:50 },
-  { id:4, nama:"Juara Nasional", pengurangan:100 },
-  { id:5, nama:"Hafalan Qur'an (1 Juz)", pengurangan:25 },
-  { id:6, nama:"Setor Vocab 100 kata", pengurangan:15 },
+  { id:1, nama:"Juara Kecamatan", pengurangan:10 },
+  { id:2, nama:"Juara Kota", pengurangan:20 },
+  { id:3, nama:"Juara Provinsi", pengurangan:30 },
+  { id:4, nama:"Juara Nasional", pengurangan:90 },
+  { id:5, nama:"Hafalan Qur'an (1 Juz)", pengurangan:30 },
+  { id:6, nama:"Setor Vocab 100 kata", pengurangan:30 },
   { id:7, nama:"Siswa Teladan", pengurangan:20 },
   { id:8, nama:"Pengurus OSIS Aktif", pengurangan:10 },
-  { id:9, nama:"Lainnya", pengurangan:0 },
+  { id:9, nama:"Perubahan Perilaku", pengurangan:15 },
+  { id:10, nama:"Lainnya", pengurangan:0 },
 ];
 
 const INITIAL_PELANGGARAN = [
@@ -382,11 +383,10 @@ const getAkumulasiPoin = (nisn, pelanggaran, apresiasi) => {
 
   const totalApresiasi = apresiasi
     .filter(a => String(a.nisn) === String(nisn))
-    .reduce((s, a) => s + Number(a.pengurangan || 0), 0);
+    .reduce((s, a) => s + Number(a.poin || 0), 0);
 
   return Math.max(0, totalPelanggaran - totalApresiasi);
 };
-
 
 const getSP = (poin) => {
   if (poin > 270) {
@@ -2437,11 +2437,41 @@ return (
       </div>
 
       {/* Stats apresiasi */}
-      <div className="grid-auto" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 14, marginBottom: 20 }}>
-        {JENIS_APRESIASI.slice(0, 4).map(j => (
-          <StatCard key={j.id} icon="🏅" label={j.nama} value={apresiasi.filter(a => a.jenis === j.nama).length} color={C.gold} sub={`-${j.pengurangan} poin/apresiasi`} />
-        ))}
-      </div>
+<div
+  className="grid-auto"
+  style={{
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+    gap: 14,
+    marginBottom: 20
+  }}
+>
+  {[
+    "Perubahan Perilaku",
+    "Juara Kota",
+    "Juara Provinsi",
+    "Juara Nasional"
+  ].map((nama) => {
+    const j = JENIS_APRESIASI.find(item => item.nama === nama);
+
+    if (!j) return null;
+
+    const jumlah = apresiasi.filter(
+      a => a.jenis === j.nama
+    ).length;
+
+    return (
+      <StatCard
+        key={j.id}
+        icon="🏅"
+        label={j.nama}
+        value={jumlah}
+        color={C.gold}
+        sub={`-${j.pengurangan} poin/apresiasi`}
+      />
+    );
+  })}
+</div>
 
       <Card className="card-tight">
         <Table
